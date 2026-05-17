@@ -77,6 +77,11 @@ class DrawerItem extends React.Component {
       focused ? [styles.activeStyle, styles.shadow] : null
     ];
 
+    let displayTitle = title;
+    if (title === "Home") displayTitle = "VeciSeguro / Pánico";
+    if (title === "Profile") displayTitle = "Mi Perfil";
+    if (title === "Account") displayTitle = "Cerrar Sesión";
+
     return (
       <TouchableOpacity
         style={{ height: 60 }}
@@ -98,7 +103,7 @@ class DrawerItem extends React.Component {
               bold={focused ? true : false}
               color={focused ? "white" : "rgba(0,0,0,0.5)"}
             >
-              {title}
+              {displayTitle}
             </Text>
           </Block>
         </Block>

@@ -106,14 +106,14 @@ function ArticlesStack(props) {
 function ProfileStack(props) {
   return (
     <Stack.Navigator
-      initialRouteName="Profile"
+      initialRouteName="ProfileScreen"
       screenOptions={{
         mode: "card",
         headerShown: "screen",
       }}
     >
       <Stack.Screen
-        name="Profile"
+        name="ProfileScreen"
         component={Profile}
         options={{
           header: ({ navigation, scene }) => (
@@ -159,7 +159,7 @@ function HomeStack(props) {
       }}
     >
       <Stack.Screen
-        name="Home"
+        name="HomeScreen"
         component={Home}
         options={{
           header: ({ navigation, scene }) => (
@@ -206,8 +206,15 @@ export default function OnboardingStack(props) {
       <Stack.Screen
         name="Onboarding"
         component={Onboarding}
-        option={{
+        options={{
           headerTransparent: true,
+        }}
+      />
+      <Stack.Screen
+        name="Account"
+        component={Register}
+        options={{
+          headerShown: false,
         }}
       />
       <Stack.Screen name="App" component={AppStack} />
@@ -220,25 +227,26 @@ function AppStack(props) {
     <Drawer.Navigator
       style={{ flex: 1 }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
-      drawerStyle={{
-        backgroundColor: "white",
-        width: width * 0.8,
-      }}
-      drawerContentOptions={{
-        activeTintcolor: "white",
-        inactiveTintColor: "#000",
-        activeBackgroundColor: "transparent",
-        itemStyle: {
+      screenOptions={{
+        headerShown: false,
+        drawerStyle: {
+          backgroundColor: "white",
+          width: width * 0.8,
+        },
+        drawerActiveTintColor: "white",
+        drawerInactiveTintColor: "#000",
+        drawerActiveBackgroundColor: "transparent",
+        drawerItemStyle: {
           width: width * 0.75,
           backgroundColor: "transparent",
           paddingVertical: 16,
-          paddingHorizonal: 12,
+          paddingHorizontal: 12,
           justifyContent: "center",
           alignContent: "center",
           alignItems: "center",
           overflow: "hidden",
         },
-        labelStyle: {
+        drawerLabelStyle: {
           fontSize: 18,
           marginLeft: 12,
           fontWeight: "normal",
@@ -263,20 +271,6 @@ function AppStack(props) {
       <Drawer.Screen
         name="Account"
         component={Register}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Drawer.Screen
-        name="Elements"
-        component={ElementsStack}
-        options={{
-          headerShown: false,
-        }}
-      />
-      <Drawer.Screen
-        name="Articles"
-        component={ArticlesStack}
         options={{
           headerShown: false,
         }}

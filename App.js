@@ -1,3 +1,4 @@
+import "react-native-url-polyfill/auto";
 import React, { useCallback, useEffect, useState } from "react";
 import { Image } from "react-native";
 import * as SplashScreen from "expo-splash-screen";

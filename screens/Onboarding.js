@@ -8,12 +8,26 @@ import {
 } from "react-native";
 import { Block, Button, Text, theme } from "galio-framework";
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const { height, width } = Dimensions.get("screen");
 
 import argonTheme from "../constants/Theme";
 import Images from "../constants/Images";
 
 class Onboarding extends React.Component {
+  async componentDidMount() {
+    try {
+      const phone = await AsyncStorage.getItem('user_phone');
+      if (phone) {
+        console.log("DEBUG: ¡Sesión activa detectada en Onboarding! Saltando directo a la App:", phone);
+        this.props.navigation.navigate("App");
+      }
+    } catch (err) {
+      console.warn("DEBUG: Error al auto-iniciar sesión:", err.message);
+    }
+  }
+
   render() {
     const { navigation } = this.props;
 
@@ -34,17 +48,17 @@ class Onboarding extends React.Component {
               <Block style={styles.title}>
                 <Block>
                   <Text color="white" size={60}>
-                    Design
+                    Veci
                   </Text>
                 </Block>
                 <Block>
                   <Text color="white" size={60}>
-                    System
+                    Seguro
                   </Text>
                 </Block>
                 <Block style={styles.subTitle}>
                   <Text color="white" size={16}>
-                    Fully coded React Native components.
+                    Seguridad comunitaria al alcance de tu mano.
                   </Text>
                 </Block>
               </Block>
@@ -52,10 +66,10 @@ class Onboarding extends React.Component {
                 <Button
                   style={styles.button}
                   color={argonTheme.COLORS.SECONDARY}
-                  onPress={() => navigation.navigate("App")}
+                  onPress={() => navigation.navigate("Account")}
                   textStyle={{ color: argonTheme.COLORS.BLACK }}
                 >
-                  Get Started
+                  INGRESAR
                 </Button>
               </Block>
           </Block>
