@@ -171,11 +171,13 @@ class Header extends React.Component {
     const headerStyles = [
       !noShadow ? styles.shadow : null,
       transparent ? { backgroundColor: 'rgba(0,0,0,0)' } : null,
+      white && !transparent ? { backgroundColor: '#0B0F19' } : null,
     ];
 
     const navbarStyles = [
       styles.navbar,
-      bgColor && { backgroundColor: bgColor }
+      bgColor && { backgroundColor: bgColor },
+      white && !transparent ? { backgroundColor: '#0B0F19' } : null,
     ];
 
     return (
