@@ -16,7 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { Buffer } from "buffer";
 
-import { Button, Input, Icon } from "../components";
+import { Button, Input, Icon, Header } from "../components";
 import { Images, argonTheme } from "../constants";
 import { HeaderHeight } from "../constants/utils";
 import { supabase } from "../constants/Supabase";
@@ -445,6 +445,13 @@ class Profile extends React.Component {
 
     return (
       <Block flex style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <Header
+          transparent
+          back
+          title="Mi Perfil"
+          navigation={this.props.navigation}
+          white={darkMode}
+        />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
