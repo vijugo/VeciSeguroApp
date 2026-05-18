@@ -68,29 +68,29 @@ class About extends React.Component {
 
     const specs = [
       {
-        icon: "wifi",
-        title: "Conectividad IoT Real-Time (MQTT)",
-        desc: "Comunicación bidireccional instantánea de baja latencia con sirenas físicas basadas en ESP32-P4/ESP32-S3."
+        icon: "bell",
+        title: "Botón de Emergencia Instantáneo",
+        desc: "Al mantener presionado el botón de SOS, la sirena física de tu cuadra sonará fuerte, alertando de inmediato a tus vecinos."
       },
       {
         icon: "map-pin",
-        title: "Geolocalización Satelital GPS",
-        desc: "Envío en tiempo real de coordenadas exactas al disparar un pánico, permitiendo despacho inmediato."
+        title: "Ubicación Vecinal Exacta",
+        desc: "Tus vecinos recibirán tu ubicación en tiempo real para saber de forma precisa de dónde proviene la alerta y acudir a ayudarte."
       },
       {
-        icon: "shield",
-        title: "Seguridad y Autenticación Supabase",
-        desc: "Control de acceso robusto, encriptación en la nube y sincronización instantánea de perfiles y dispositivos."
+        icon: "sliders",
+        title: "Alertas a tu Medida",
+        desc: "Tú decides qué avisos deseas recibir en tu celular (como el camión de la basura, acoso o emergencias médicas) para evitar molestias."
       },
       {
-        icon: "bell",
-        title: "Chimes y Voz Personalizados",
-        desc: "Reproducción de sonidos pregrabados por carpeta y tramas específicas a través de hardware de sonido dedicado."
+        icon: "users",
+        title: "Unión y Convivencia",
+        desc: "Fortalece la seguridad de tu comunidad promoviendo la solidaridad, la comunicación y el apoyo mutuo entre todos los vecinos."
       },
       {
-        icon: "monitor",
-        title: "Panel Web Administrativo Vercel",
-        desc: "Administración integral de dispositivos, logs de pánico, usuarios y mapa vivo interactivo en la plataforma web."
+        icon: "globe",
+        title: "Mapa del Barrio en Vivo",
+        desc: "Puedes ver la ubicación de las sirenas del barrio y revisar el historial de alertas activadas desde la página oficial."
       }
     ];
 
@@ -119,19 +119,19 @@ class About extends React.Component {
               VeciSeguro App
             </Text>
             <Text size={13} color={themeColors.accent} style={styles.versionBadge}>
-              Versión v2.0.0 - Premium
+              Protegiendo Nuestro Barrio
             </Text>
             <Text size={14} color={themeColors.textSecondary} style={styles.headerDescription}>
-              Ecosistema de seguridad comunitaria inteligente y respuesta de emergencia en tiempo real.
+              La herramienta digital creada para cuidarnos, comunicarnos y proteger juntos a nuestra comunidad. ¡La seguridad la hacemos entre todos!
             </Text>
           </Block>
 
           {/* Tarjeta de Especificaciones */}
           <Block style={[styles.glassCard, { backgroundColor: themeColors.cardBackground, borderColor: themeColors.cardBorder }]}>
             <Block row middle style={{ marginBottom: 20 }}>
-              <Icon name="cpu" family="Feather" size={18} color={themeColors.accent} style={{ marginRight: 8 }} />
+              <Icon name="heart" family="Feather" size={18} color={themeColors.accent} style={{ marginRight: 8 }} />
               <Text bold size={13} color={themeColors.accent} style={{ letterSpacing: 0.8 }}>
-                ESPECIFICACIONES DEL SISTEMA
+                ¿CÓMO NOS CUIDA VECISEGURO?
               </Text>
             </Block>
 
@@ -173,15 +173,15 @@ class About extends React.Component {
               ]}
             >
               <Block row middle>
-                <Icon name="external-link" family="Feather" size={18} color="white" style={{ marginRight: 8 }} />
+                <Icon name="globe" family="Feather" size={18} color="white" style={{ marginRight: 8 }} />
                 <Text bold size={14} color="white" style={{ letterSpacing: 0.8 }}>
-                  VISITAR PLATAFORMA WEB
+                  VER MAPA DEL BARRIO
                 </Text>
               </Block>
             </TouchableOpacity>
 
             <Text size={11} color={themeColors.textSecondary} style={styles.webButtonSubText}>
-              Accede a la consola administrativa, mapa vivo y logs en:
+              Consulta el mapa de sirenas y registros del barrio en:
             </Text>
             <Text bold size={12} color={themeColors.accent} onPress={this.handleOpenWeb}>
               veci-seguro-web.vercel.app
