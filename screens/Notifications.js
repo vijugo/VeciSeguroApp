@@ -200,7 +200,7 @@ class Notifications extends React.Component {
     if (alerts.length === 0) {
       return (
         <Block style={[styles.glassCard, { backgroundColor: themeColors.cardBackground, borderColor: themeColors.cardBorder, paddingVertical: 40 }]}>
-          <Text size={14} color={themeColors.textSecondary} center style={{ fontStyle: "italic" }}>
+          <Text size={15} color={themeColors.textSecondary} center style={{ fontStyle: "italic" }}>
             No se encontraron alertas configuradas para tu equipo.
           </Text>
         </Block>
@@ -209,9 +209,9 @@ class Notifications extends React.Component {
 
     return (
       <Block style={[styles.glassCard, { backgroundColor: themeColors.cardBackground, borderColor: themeColors.cardBorder }]}>
-        <Block row middle style={{ marginBottom: 20 }}>
-          <Icon name="bell" family="Feather" size={18} color={themeColors.accent} style={{ marginRight: 8 }} />
-          <Text bold size={12} color={themeColors.accent} style={{ letterSpacing: 0.8 }}>
+        <Block row middle style={{ marginBottom: 24 }}>
+          <Icon name="bell" family="Feather" size={20} color={themeColors.accent} style={{ marginRight: 10 }} />
+          <Text bold size={13} color={themeColors.accent} style={{ letterSpacing: 0.8 }}>
             ALERTAS ACTIVAS EN TU SIRENA
           </Text>
         </Block>
@@ -223,42 +223,39 @@ class Notifications extends React.Component {
           return (
             <Block
               key={alert.id || index}
-              row
-              middle
-              space="between"
               style={[
                 styles.alertRow,
-                index === alerts.length - 1 ? null : styles.rowBorder
+                index === alerts.length - 1 ? null : [styles.rowBorder, { borderBottomColor: darkMode ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.06)" }]
               ]}
             >
-              <Block row middle flex={0.75}>
-                <Block style={[styles.iconWrapper, { backgroundColor: darkMode ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.03)" }]}>
+              <Block row middle style={{ flex: 1 }}>
+                <Block style={[styles.iconWrapper, { backgroundColor: darkMode ? "rgba(255, 255, 255, 0.04)" : "rgba(0, 0, 0, 0.03)" }]}>
                   {hasLogo ? (
                     <Image
                       source={{ uri: alert.logoUrl }}
-                      style={{ width: 26, height: 26, borderRadius: 6 }}
+                      style={{ width: 32, height: 32, borderRadius: 8 }}
                       resizeMode="cover"
                     />
                   ) : (
                     <Icon
                       name={isEnabled ? "bell" : "bell-off"}
                       family="Feather"
-                      size={16}
+                      size={18}
                       color={isEnabled ? themeColors.success : themeColors.textSecondary}
                     />
                   )}
                 </Block>
-                <Block style={{ marginLeft: 12 }}>
-                  <Text bold size={13} color={themeColors.textPrimary}>
+                <Block style={{ marginLeft: 16, flex: 1 }}>
+                  <Text bold size={15} color={themeColors.textPrimary}>
                     {alert.name}
                   </Text>
-                  <Text size={10} color={themeColors.textSecondary} style={{ marginTop: 2 }}>
+                  <Text size={11} color={themeColors.textSecondary} style={{ marginTop: 4 }}>
                     Trama: F{alert.folder} / A{alert.filename}
                   </Text>
                 </Block>
               </Block>
 
-              <Block flex={0.25} style={{ alignItems: "flex-end" }}>
+              <Block style={{ paddingLeft: 10 }}>
                 <Switch
                   value={isEnabled}
                   onValueChange={() => this.handleToggleAlert(alert.name)}
@@ -314,7 +311,7 @@ class Notifications extends React.Component {
         {loading ? (
           <Block style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={themeColors.accent} />
-            <Text size={14} color={themeColors.textSecondary} style={{ marginTop: 12 }}>
+            <Text size={15} color={themeColors.textSecondary} style={{ marginTop: 12 }}>
               Cargando tus configuraciones...
             </Text>
           </Block>
@@ -325,10 +322,10 @@ class Notifications extends React.Component {
           >
             {/* Header explicativo premium */}
             <Block style={styles.headerSection}>
-              <Text bold size={24} color={themeColors.textPrimary}>
+              <Text bold size={26} color={themeColors.textPrimary}>
                 Notificaciones {darkMode ? "🔔" : "☀️"}
               </Text>
-              <Text size={13} color={themeColors.textSecondary} style={{ marginTop: 8, lineHeight: 20 }}>
+              <Text size={14} color={themeColors.textSecondary} style={{ marginTop: 8, lineHeight: 22 }}>
                 Decide cuáles alertas comunitarias deseas recibir en tu teléfono móvil y cuáles prefieres silenciar para evitar interrupciones.
               </Text>
             </Block>
@@ -354,8 +351,8 @@ class Notifications extends React.Component {
                   <ActivityIndicator color="white" />
                 ) : (
                   <Block row middle>
-                    <Icon name="check-circle" family="Feather" size={18} color="white" style={{ marginRight: 8 }} />
-                    <Text bold size={14} color="white" style={{ letterSpacing: 0.8 }}>
+                    <Icon name="check-circle" family="Feather" size={20} color="white" style={{ marginRight: 8 }} />
+                    <Text bold size={15} color="white" style={{ letterSpacing: 0.8 }}>
                       GUARDAR PREFERENCIAS
                     </Text>
                   </Block>
@@ -398,23 +395,25 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   alertRow: {
-    paddingVertical: 14,
-    alignItems: "center"
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%"
   },
   rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)"
+    borderBottomWidth: 1
   },
   iconWrapper: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center"
   },
   saveButton: {
     width: width - 40,
-    height: 52,
+    height: 54,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
