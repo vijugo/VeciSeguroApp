@@ -76,8 +76,16 @@ class History extends React.Component {
             .order('created_at', { ascending: false })
             .limit(50);
             
-          // Filtramos para mostrar solo los que requieren chat (Emergencias) para no saturar la app de basura
-          const emergencyLogs = (logs || []).filter(log => log.metadata?.requires_chat !== false);
+          // Filtramos para mostrar solo emergencias reales (para registros nuevos y antiguos)
+          const criticalNames = ['PÁNICO', 'ROBO', 'INCENDIO', 'ACOSO', 'MÉDICA', 'URGENCIA', 'SOS', 'PANICO'];
+          const emergencyLogs = (logs || []).filter(log => {
+            const hasChat = log.metadata?.requires_chat;
+            if (hasChat === true) return true;
+            if (hasChat === false) return false;
+            // Fallback para alertas antiguas sin metadata.requires_chat
+            const name = (log.alert_name || '').toUpperCase();
+            return criticalNames.some(cn => name.includes(cn));
+          });
           this.setState({ logs: emergencyLogs });
         }
       }
