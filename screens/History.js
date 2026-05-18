@@ -76,10 +76,8 @@ class History extends React.Component {
             .order('created_at', { ascending: false })
             .limit(50);
             
-          // Filtramos para mostrar solo los que requieren chat (Emergencias)
-          const evidenceLogs = (logs || []).filter(log => log.metadata?.requires_chat !== false);
-            
-          this.setState({ logs: evidenceLogs });
+          // Guardamos todos los logs (tanto emergencias como avisos informativos)
+          this.setState({ logs: logs || [] });
         }
       }
     } catch (e) {
@@ -112,37 +110,51 @@ class History extends React.Component {
   renderLog = (log) => {
     const isResolved = log.metadata?.status === 'resolved';
     const date = new Date(log.created_at);
+    const requiresChat = log.metadata?.requires_chat !== false;
     
     return (
       <TouchableOpacity 
         key={log.id} 
-        style={styles.card}
+        style={[styles.card, !requiresChat && { opacity: 0.85, backgroundColor: '#F8FAFC' }]}
+        disabled={!requiresChat}
         onPress={() => this.openChatEvidence(log)}
       >
         <Block row space="between" style={{ padding: theme.SIZES.BASE }}>
           <Block flex row>
-            <Block style={[styles.iconContainer, { backgroundColor: isResolved ? argonTheme.COLORS.SUCCESS : argonTheme.COLORS.ERROR }]}>
+            <Block style={[styles.iconContainer, { backgroundColor: !requiresChat ? argonTheme.COLORS.MUTED : (isResolved ? argonTheme.COLORS.SUCCESS : argonTheme.COLORS.ERROR) }]}>
               <Icon
-                name={isResolved ? "check" : "bell"}
+                name={!requiresChat ? "info" : (isResolved ? "check" : "bell")}
                 family="Feather"
                 size={16}
                 color="white"
               />
             </Block>
             <Block flex style={{ marginLeft: 15 }}>
-              <Text size={16} bold color={argonTheme.COLORS.TEXT}>{log.alert_name}</Text>
+              <Text size={16} bold color={!requiresChat ? argonTheme.COLORS.MUTED : argonTheme.COLORS.TEXT}>{log.alert_name}</Text>
               <Text size={12} color={argonTheme.COLORS.MUTED} style={{ marginTop: 2 }}>
                 {date.toLocaleDateString()} • {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </Text>
-              <Text size={12} bold color={argonTheme.COLORS.INFO} style={{ marginTop: 5 }}>
-                Ver Evidencia / Chat
-              </Text>
+              {requiresChat ? (
+                <Text size={12} bold color={argonTheme.COLORS.INFO} style={{ marginTop: 5 }}>
+                  Ver Evidencia / Chat
+                </Text>
+              ) : (
+                <Text size={12} italic color={argonTheme.COLORS.MUTED} style={{ marginTop: 5 }}>
+                  Solo Aviso (Sin Chat)
+                </Text>
+              )}
             </Block>
           </Block>
           <Block center justify="center">
-            <Badge color={isResolved ? argonTheme.COLORS.SUCCESS : argonTheme.COLORS.ERROR} style={{ paddingHorizontal: 8 }}>
-              <Text size={10} bold color="white">{isResolved ? "CONTROLADO" : "EN CURSO"}</Text>
-            </Badge>
+            {requiresChat ? (
+              <Badge color={isResolved ? argonTheme.COLORS.SUCCESS : argonTheme.COLORS.ERROR} style={{ paddingHorizontal: 8 }}>
+                <Text size={10} bold color="white">{isResolved ? "CONTROLADO" : "EN CURSO"}</Text>
+              </Badge>
+            ) : (
+              <Badge color={argonTheme.COLORS.MUTED} style={{ paddingHorizontal: 8 }}>
+                <Text size={10} bold color="white">AVISO</Text>
+              </Badge>
+            )}
           </Block>
         </Block>
       </TouchableOpacity>
