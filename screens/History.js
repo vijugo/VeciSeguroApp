@@ -76,8 +76,9 @@ class History extends React.Component {
             .order('created_at', { ascending: false })
             .limit(50);
             
-          // Guardamos todos los logs (tanto emergencias como avisos informativos)
-          this.setState({ logs: logs || [] });
+          // Filtramos para mostrar solo los que requieren chat (Emergencias) para no saturar la app de basura
+          const emergencyLogs = (logs || []).filter(log => log.metadata?.requires_chat !== false);
+          this.setState({ logs: emergencyLogs });
         }
       }
     } catch (e) {
