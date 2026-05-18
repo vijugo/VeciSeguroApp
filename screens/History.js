@@ -5,10 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  View
+  View,
+  Appearance
 } from "react-native";
 import { Block, theme, Text } from "galio-framework";
-import { Icon } from "../components";
+import { Icon, Header } from "../components";
 import { argonTheme } from "../constants";
 import { supabase } from "../constants/Supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -19,14 +20,17 @@ class History extends React.Component {
   state = {
     loading: true,
     logs: [],
-    userProfile: null
+    userProfile: null,
+    darkMode: true
   };
 
   async componentDidMount() {
     this._unsubscribeFocus = this.props.navigation.addListener('focus', () => {
       this.fetchHistory();
+      this.loadTheme();
     });
     this.fetchHistory();
+    this.loadTheme();
   }
 
   componentWillUnmount() {
@@ -34,6 +38,20 @@ class History extends React.Component {
       this._unsubscribeFocus();
     }
   }
+
+  loadTheme = async () => {
+    try {
+      const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
+      if (savedMode !== null) {
+        this.setState({ darkMode: JSON.parse(savedMode) });
+      } else {
+        const systemMode = Appearance.getColorScheme();
+        this.setState({ darkMode: systemMode === "dark" });
+      }
+    } catch (e) {
+      console.log("Error loading dark mode in History", e);
+    }
+  };
 
   fetchHistory = async () => {
     this.setState({ loading: true });
@@ -116,7 +134,7 @@ class History extends React.Component {
     }
   };
 
-  renderLog = (log) => {
+  renderLog = (log, themeColors) => {
     const isResolved = log.metadata && log.metadata.status === 'resolved';
     const date = new Date(log.created_at);
     const requiresChat = !log.metadata || log.metadata.requires_chat !== false;
@@ -124,7 +142,14 @@ class History extends React.Component {
     return (
       <TouchableOpacity 
         key={log.id} 
-        style={[styles.card, !requiresChat && { opacity: 0.85, backgroundColor: '#F8FAFC' }]}
+        style={[
+          styles.card, 
+          { 
+            backgroundColor: themeColors.cardBackground, 
+            borderColor: themeColors.cardBorder 
+          },
+          !requiresChat && { opacity: 0.85 }
+        ]}
         disabled={!requiresChat}
         onPress={() => this.openChatEvidence(log)}
       >
@@ -139,16 +164,16 @@ class History extends React.Component {
               />
             </Block>
             <Block flex style={{ marginLeft: 15 }}>
-              <Text size={16} bold color={!requiresChat ? argonTheme.COLORS.MUTED : argonTheme.COLORS.TEXT}>{log.alert_name}</Text>
-              <Text size={12} color={argonTheme.COLORS.MUTED} style={{ marginTop: 2 }}>
+              <Text size={16} bold color={!requiresChat ? argonTheme.COLORS.MUTED : themeColors.textPrimary}>{log.alert_name}</Text>
+              <Text size={12} color={themeColors.textSecondary} style={{ marginTop: 2 }}>
                 {date.toLocaleDateString()} • {date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </Text>
               {requiresChat ? (
-                <Text size={12} bold color={argonTheme.COLORS.INFO} style={{ marginTop: 5 }}>
+                <Text size={12} bold color={themeColors.accent} style={{ marginTop: 5 }}>
                   Ver Evidencia / Chat
                 </Text>
               ) : (
-                <Text size={12} italic color={argonTheme.COLORS.MUTED} style={{ marginTop: 5 }}>
+                <Text size={12} italic color={themeColors.textSecondary} style={{ marginTop: 5 }}>
                   Solo Aviso (Sin Chat)
                 </Text>
               )}
@@ -171,30 +196,54 @@ class History extends React.Component {
   };
 
   render() {
-    const { loading, logs } = this.state;
+    const { loading, logs, darkMode } = this.state;
+
+    const themeColors = darkMode ? {
+      background: "#0B0F19",
+      textPrimary: "#FFFFFF",
+      textSecondary: "rgba(255, 255, 255, 0.4)",
+      cardBackground: "rgba(255, 255, 255, 0.03)",
+      cardBorder: "rgba(255, 255, 255, 0.08)",
+      accent: "#6366F1"
+    } : {
+      background: "#F8FAFC",
+      textPrimary: "#1E293B",
+      textSecondary: "rgba(30, 41, 59, 0.6)",
+      cardBackground: "#FFFFFF",
+      cardBorder: "rgba(0, 0, 0, 0.06)",
+      accent: "#4F46E5"
+    };
+
     return (
-      <Block flex center style={styles.home}>
+      <Block flex style={[styles.home, { backgroundColor: themeColors.background }]}>
+        <Header
+          transparent
+          back
+          title="Historial"
+          navigation={this.props.navigation}
+          white={darkMode}
+        />
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.articles}
         >
           <Block flex>
-            <Text bold size={18} style={styles.title}>
+            <Text bold size={18} color={themeColors.textPrimary} style={styles.title}>
               Historial de Incidentes
             </Text>
-            <Text size={14} color={argonTheme.COLORS.MUTED} style={{ marginBottom: 20 }}>
+            <Text size={14} color={themeColors.textSecondary} style={{ marginBottom: 20 }}>
               Revisa la evidencia de los últimos eventos de tu cuadra.
             </Text>
             
             {loading ? (
-              <ActivityIndicator size="large" color={argonTheme.COLORS.PRIMARY} style={{ marginTop: 50 }} />
+              <ActivityIndicator size="large" color={themeColors.accent} style={{ marginTop: 50 }} />
             ) : logs.length === 0 ? (
               <Block center style={{ marginTop: 50 }}>
-                <Icon name="inbox" family="Feather" size={50} color={argonTheme.COLORS.MUTED} />
-                <Text size={16} color={argonTheme.COLORS.MUTED} style={{ marginTop: 10 }}>No hay historial disponible</Text>
+                <Icon name="inbox" family="Feather" size={50} color={themeColors.textSecondary} />
+                <Text size={16} color={themeColors.textSecondary} style={{ marginTop: 10 }}>No hay historial disponible</Text>
               </Block>
             ) : (
-              logs.map(log => this.renderLog(log))
+              logs.map(log => this.renderLog(log, themeColors))
             )}
           </Block>
         </ScrollView>
@@ -212,20 +261,18 @@ const Badge = ({ children, color, style }) => (
 const styles = StyleSheet.create({
   home: {
     width: width,
-    backgroundColor: theme.COLORS.WHITE
   },
   articles: {
     width: width - theme.SIZES.BASE * 2,
     paddingVertical: theme.SIZES.BASE,
+    alignSelf: "center"
   },
   title: {
     paddingBottom: 5,
   },
   card: {
-    backgroundColor: theme.COLORS.WHITE,
     marginVertical: theme.SIZES.BASE / 2,
     borderWidth: 1,
-    borderColor: '#E9ECEF',
     borderRadius: 8,
     shadowColor: "black",
     shadowOffset: { width: 0, height: 2 },
