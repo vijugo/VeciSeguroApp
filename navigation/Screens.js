@@ -17,6 +17,7 @@ import Profile from "../screens/Profile";
 import React from "react";
 import Register from "../screens/Register";
 import About from "../screens/About";
+import History from "../screens/History";
 import VeciChat from "../screens/VeciChat";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from "@react-navigation/drawer";
@@ -253,6 +254,37 @@ export default function OnboardingStack(props) {
   );
 }
 
+function HistoryStack(props) {
+  return (
+    <Stack.Navigator
+      initialRouteName="HistoryScreen"
+      screenOptions={{
+        mode: "card",
+        headerShown: "screen",
+      }}
+    >
+      <Stack.Screen
+        name="HistoryScreen"
+        component={History}
+        options={{
+          header: ({ navigation, scene }) => (
+            <Header title="Historial de Alertas" navigation={navigation} scene={scene} />
+          ),
+          cardStyle: { backgroundColor: "#F8F9FE" }
+        }}
+      />
+      <Stack.Screen
+        name="VeciChat"
+        component={VeciChat}
+        options={{
+          headerShown: false,
+          cardStyle: { backgroundColor: "transparent" }
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function AppStack(props) {
   return (
     <Drawer.Navigator
@@ -295,6 +327,13 @@ function AppStack(props) {
       <Drawer.Screen
         name="Profile"
         component={ProfileStack}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Drawer.Screen
+        name="History"
+        component={HistoryStack}
         options={{
           headerShown: false,
         }}

@@ -479,6 +479,7 @@ class VeciChat extends React.Component {
     };
 
     const isResolved = chatRoom?.status === "resolved" || alertLog?.metadata?.status === "resolved";
+    const isReadOnly = this.props.route.params?.isReadOnly || false;
 
     const quickMessages = [
       "🚨 ¡Voy de salida a ayudar!",
@@ -528,7 +529,7 @@ class VeciChat extends React.Component {
                 </Block>
 
                 {/* Botón de Resolver */}
-                {!isResolved && (
+                {(!isResolved && !isReadOnly) && (
                   <TouchableOpacity
                     onPress={this.handleMarkUnderControl}
                     style={[styles.resolveButton, { backgroundColor: themeColors.dangerLight, borderColor: themeColors.danger }]}
@@ -551,14 +552,14 @@ class VeciChat extends React.Component {
             />
 
             {/* Panel inferior de interacción */}
-            {isResolved ? (
+            {(isResolved || isReadOnly) ? (
               <Block center style={[styles.resolvedBanner, { backgroundColor: themeColors.cardBackground }]}>
                 <Icon name="check-circle" family="Feather" size={20} color={darkMode ? "#10B981" : "#059669"} style={{ marginBottom: 6 }} />
                 <Text bold size={13} color={darkMode ? "#10B981" : "#059669"}>
-                  ESTE INCIDENTE HA SIDO MARCADO BAJO CONTROL
+                  {isReadOnly && !isResolved ? "ESTÁS EN MODO LECTURA DE HISTORIAL" : "ESTE INCIDENTE HA SIDO MARCADO BAJO CONTROL"}
                 </Text>
                 <Text size={11} color={themeColors.textSecondary} style={{ marginTop: 2 }}>
-                  El chat se encuentra cerrado y archivado en el historial.
+                  {isReadOnly && !isResolved ? "Solo puedes ver los mensajes enviados durante el evento." : "El chat se encuentra cerrado y archivado en el historial."}
                 </Text>
               </Block>
             ) : (

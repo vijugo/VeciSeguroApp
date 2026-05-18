@@ -320,10 +320,12 @@ class Home extends React.Component {
                this.setState({ activeEmergency: null });
             }
           } else if (payload.eventType === 'INSERT' || (payload.eventType === 'UPDATE' && metadata.status === 'active')) {
-            // Nueva alerta activa
-            this.setState({
-              activeEmergency: newAlert
-            });
+            // Solo establecer como emergencia activa si requiere chat
+            if (metadata.requires_chat !== false) {
+              this.setState({
+                activeEmergency: newAlert
+              });
+            }
             
             // Mostrar notificación interna si es un INSERT y no somos nosotros quienes la disparamos
             if (payload.eventType === 'INSERT') {
@@ -357,7 +359,7 @@ class Home extends React.Component {
       if (data && data.length > 0) {
         const latest = data[0];
         const metadata = latest.metadata || {};
-        if (metadata.status === 'active') {
+        if (metadata.status === 'active' && metadata.requires_chat !== false) {
           console.log("DEBUG: 🚨 Emergencia activa encontrada de hace poco:", latest.alert_name);
           this.setState({ activeEmergency: latest });
         } else {
@@ -722,7 +724,8 @@ class Home extends React.Component {
             folder: alertTypeObj.folder || '1',
             filename: alertTypeObj.filename || '1',
             logo_url: alertTypeObj.logo_url,
-            audio_url: alertTypeObj.audio_url
+            audio_url: alertTypeObj.audio_url,
+            requires_chat: alertTypeObj.requires_chat !== false
           };
         })
         .filter(Boolean);
@@ -936,7 +939,8 @@ class Home extends React.Component {
                 longitude: location?.coords?.longitude || 0,
                 accuracy: location?.coords?.accuracy || 0,
                 folder: alertItem.folder,
-                filename: alertItem.filename
+                filename: alertItem.filename,
+                requires_chat: alertItem.requires_chat !== false
               }
             }
           ]);

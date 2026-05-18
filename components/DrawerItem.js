@@ -55,6 +55,15 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.INFO}
           />
         );
+      case "History":
+        return (
+          <Icon
+            name="archive"
+            family="Feather"
+            size={14}
+            color={focused ? "white" : argonTheme.COLORS.WARNING}
+          />
+        );
       case "Notifications":
         return (
           <Icon
@@ -96,6 +105,7 @@ class DrawerItem extends React.Component {
     let displayTitle = title;
     if (title === "Home") displayTitle = "VeciSeguro / Pánico";
     if (title === "Profile") displayTitle = "Mi Perfil";
+    if (title === "History") displayTitle = "Historial de Alertas";
     if (title === "Notifications") displayTitle = "Personalizar Alertas";
     if (title === "Account") displayTitle = "Cerrar Sesión";
     if (title === "About") displayTitle = "Acerca de";
