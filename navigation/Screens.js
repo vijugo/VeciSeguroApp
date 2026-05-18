@@ -10,6 +10,7 @@ import CustomDrawerContent from "./Menu";
 import Elements from "../screens/Elements";
 // screens
 import Home from "../screens/Home";
+import Notifications from "../screens/Notifications";
 import Onboarding from "../screens/Onboarding";
 import Pro from "../screens/Pro";
 import Profile from "../screens/Profile";
@@ -150,6 +151,25 @@ function ProfileStack(props) {
   );
 }
 
+function NotificationsStack(props) {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        mode: "card",
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="NotificationsScreen"
+        component={Notifications}
+        options={{
+          cardStyle: { backgroundColor: "transparent" },
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function HomeStack(props) {
   return (
     <Stack.Navigator
@@ -255,6 +275,13 @@ function AppStack(props) {
       <Drawer.Screen
         name="Profile"
         component={ProfileStack}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Drawer.Screen
+        name="Notifications"
+        component={NotificationsStack}
         options={{
           headerShown: false,
         }}
