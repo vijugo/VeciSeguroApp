@@ -32,6 +32,10 @@
       },
       "package": "com.veciseguro.app"
     },
-    "description": "Sistema de Seguridad Comunitaria VeciSeguro"
+    "description": "Sistema de Seguridad Comunitaria VeciSeguro",
+    "plugins": [
+      "expo-asset",
+      "expo-font"
+    ]
   }
 }
