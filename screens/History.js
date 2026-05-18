@@ -79,7 +79,7 @@ class History extends React.Component {
           // Filtramos para mostrar solo emergencias reales (para registros nuevos y antiguos)
           const criticalNames = ['PÁNICO', 'ROBO', 'INCENDIO', 'ACOSO', 'MÉDICA', 'URGENCIA', 'SOS', 'PANICO'];
           const emergencyLogs = (logs || []).filter(log => {
-            const hasChat = log.metadata?.requires_chat;
+            const hasChat = log.metadata && log.metadata.requires_chat;
             if (hasChat === true) return true;
             if (hasChat === false) return false;
             // Fallback para alertas antiguas sin metadata.requires_chat
@@ -117,9 +117,9 @@ class History extends React.Component {
   };
 
   renderLog = (log) => {
-    const isResolved = log.metadata?.status === 'resolved';
+    const isResolved = log.metadata && log.metadata.status === 'resolved';
     const date = new Date(log.created_at);
-    const requiresChat = log.metadata?.requires_chat !== false;
+    const requiresChat = !log.metadata || log.metadata.requires_chat !== false;
     
     return (
       <TouchableOpacity 
