@@ -271,10 +271,59 @@ class VeciChat extends React.Component {
         });
 
       if (error) throw error;
+      
+      this.notifyNeighbors(text.trim());
+      
       this.setState({ sending: false });
     } catch (err) {
       console.warn("DEBUG: Error al enviar mensaje:", err.message);
       this.setState({ sending: false });
+    }
+  };
+
+  notifyNeighbors = async (messageText) => {
+    try {
+      const imei = this.state.alertLog?.imei;
+      if (!imei) return;
+
+      const { data: users, error } = await supabase
+        .from('user_devices')
+        .select('user_id')
+        .eq('device_imei', imei);
+        
+      if (error || !users) return;
+      
+      const userIds = users.map(u => u.user_id).filter(id => id !== this.state.userProfile.id);
+      if (userIds.length === 0) return;
+
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('push_token')
+        .in('id', userIds)
+        .not('push_token', 'is', null);
+
+      if (!profiles || profiles.length === 0) return;
+
+      const tokens = profiles.map(p => p.push_token);
+      
+      const messages = tokens.map(token => ({
+        to: token,
+        sound: 'default',
+        title: `🚨 VeciChat: ${this.state.alertLog.alert_name}`,
+        body: `${this.state.userProfile.full_name}: ${messageText}`,
+      }));
+
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messages),
+      });
+    } catch (e) {
+      console.log("DEBUG: Error enviando push a vecinos:", e);
     }
   };
 
@@ -331,6 +380,8 @@ class VeciChat extends React.Component {
           });
 
         if (msgError) throw msgError;
+
+        this.notifyNeighbors("📷 Ha enviado una foto");
 
         this.setState({ uploadingImage: false });
       }
