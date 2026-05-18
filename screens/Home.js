@@ -292,24 +292,37 @@ class Home extends React.Component {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Escuchar todo (INSERT, UPDATE)
           schema: 'public',
           table: 'alert_logs',
           filter: `imei=eq.${imei}`
         },
         async (payload) => {
-          console.log("DEBUG: 🚨 Nueva alerta detectada en tiempo real:", payload.new);
+          console.log("DEBUG: 🚨 Cambio en alert_logs en tiempo real:", payload);
           const newAlert = payload.new;
+          if (!newAlert) return;
+          
           const metadata = newAlert.metadata || {};
           
-          this.setState({
-            activeEmergency: newAlert
-          });
-          
-          const myProfile = this.state.userProfile || {};
-          if (newAlert.user_id !== myProfile.id) {
-            const senderName = metadata.user_name || "Un vecino";
-            alert(`🚨 ¡ALERTA ACTIVA EN TU CUADRA!\n\n${senderName} ha activado la alerta "${newAlert.alert_name}".`);
+          if (metadata.status === 'resolved') {
+            // Si la alerta se marcó como resuelta, quitamos el banner si es la activa
+            if (this.state.activeEmergency && this.state.activeEmergency.id === newAlert.id) {
+               this.setState({ activeEmergency: null });
+            }
+          } else if (payload.eventType === 'INSERT' || (payload.eventType === 'UPDATE' && metadata.status === 'active')) {
+            // Nueva alerta activa
+            this.setState({
+              activeEmergency: newAlert
+            });
+            
+            // Mostrar notificación interna si es un INSERT y no somos nosotros quienes la disparamos
+            if (payload.eventType === 'INSERT') {
+              const myProfile = this.state.userProfile || {};
+              if (newAlert.user_id !== myProfile.id) {
+                const senderName = metadata.user_name || "Un vecino";
+                alert(`🚨 ¡ALERTA ACTIVA EN TU CUADRA!\n\n${senderName} ha activado la alerta "${newAlert.alert_name}".`);
+              }
+            }
           }
         }
       )
