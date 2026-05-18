@@ -71,8 +71,15 @@ class DrawerItem extends React.Component {
           size={14}
           color={focused ? "white" : "rgba(0,0,0,0.5)"}
         />);
-      case "Log out":
-        return <Icon />;
+      case "About":
+        return (
+          <Icon
+            name="info"
+            family="Feather"
+            size={14}
+            color={focused ? "white" : argonTheme.COLORS.INFO}
+          />
+        );
       default:
         return null;
     }
@@ -91,6 +98,7 @@ class DrawerItem extends React.Component {
     if (title === "Profile") displayTitle = "Mi Perfil";
     if (title === "Notifications") displayTitle = "Personalizar Alertas";
     if (title === "Account") displayTitle = "Cerrar Sesión";
+    if (title === "About") displayTitle = "Acerca de";
 
     return (
       <TouchableOpacity

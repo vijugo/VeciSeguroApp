@@ -16,6 +16,7 @@ import Pro from "../screens/Pro";
 import Profile from "../screens/Profile";
 import React from "react";
 import Register from "../screens/Register";
+import About from "../screens/About";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -161,6 +162,25 @@ function NotificationsStack(props) {
   );
 }
 
+function AboutStack(props) {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        mode: "card",
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="AboutScreen"
+        component={About}
+        options={{
+          cardStyle: { backgroundColor: "transparent" },
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 function HomeStack(props) {
   return (
     <Stack.Navigator
@@ -273,6 +293,13 @@ function AppStack(props) {
       <Drawer.Screen
         name="Notifications"
         component={NotificationsStack}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Drawer.Screen
+        name="About"
+        component={AboutStack}
         options={{
           headerShown: false,
         }}
