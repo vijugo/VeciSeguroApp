@@ -9,10 +9,13 @@ import {
   Platform,
   ActivityIndicator,
   FlatList,
-  Alert
+  Alert,
+  Image
 } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
+import { Buffer } from "buffer";
 
 import { Header, Icon } from "../components";
 import { argonTheme } from "../constants";
@@ -27,6 +30,7 @@ class VeciChat extends React.Component {
     messages: [],
     inputText: "",
     sending: false,
+    uploadingImage: false,
     userProfile: null,
     darkMode: true,
     alertLog: null
@@ -274,6 +278,69 @@ class VeciChat extends React.Component {
     }
   };
 
+  pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert("Permiso Denegado", "Se necesita permiso para acceder a la galería y poder enviar fotos.");
+        return;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.5,
+        base64: true
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        this.setState({ uploadingImage: true });
+        const asset = result.assets[0];
+        
+        // Convertir base64 a Buffer para subir a Supabase Storage
+        const base64Data = asset.base64;
+        const buffer = Buffer.from(base64Data, "base64");
+        
+        const fileExt = asset.uri.split('.').pop() || "jpg";
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${this.state.chatRoom.id}/${fileName}`;
+
+        // Subir al bucket "chat-images"
+        const { data, error } = await supabase.storage
+          .from("chat-images")
+          .upload(filePath, buffer, {
+            contentType: `image/${fileExt === 'png' ? 'png' : 'jpeg'}`
+          });
+
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("chat-images")
+          .getPublicUrl(filePath);
+          
+        const imageUrl = publicUrlData.publicUrl;
+
+        // Guardar el mensaje en chat_messages con type="image"
+        const { error: msgError } = await supabase
+          .from("chat_messages")
+          .insert({
+            chat_id: this.state.chatRoom.id,
+            sender_id: this.state.userProfile.id,
+            type: "image",
+            content: imageUrl
+          });
+
+        if (msgError) throw msgError;
+
+        this.setState({ uploadingImage: false });
+      }
+    } catch (err) {
+      console.warn("DEBUG: Error subiendo imagen:", err.message);
+      this.setState({ uploadingImage: false });
+      Alert.alert("Error", "Hubo un problema al subir o enviar la foto.");
+    }
+  };
+
   handleMarkUnderControl = async () => {
     Alert.alert(
       "¿Marcar Bajo Control?",
@@ -367,7 +434,15 @@ class VeciChat extends React.Component {
           }
         ]}>
           <Text style={senderStyle}>{item.sender_name}</Text>
-          <Text style={textStyle}>{item.content}</Text>
+          {item.type === 'image' ? (
+            <Image 
+              source={{ uri: item.content }} 
+              style={{ width: 220, height: 220, borderRadius: 12, marginVertical: 6 }} 
+              resizeMode="cover"
+            />
+          ) : (
+            <Text style={textStyle}>{item.content}</Text>
+          )}
           <Text style={[styles.timeText, { color: isMe ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.3)" }]}>
             {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
@@ -507,6 +582,18 @@ class VeciChat extends React.Component {
 
                 {/* Input de Texto principal */}
                 <Block row middle style={styles.inputWrapper}>
+                  <TouchableOpacity
+                    onPress={this.pickImage}
+                    disabled={this.state.uploadingImage}
+                    style={styles.cameraButton}
+                  >
+                    {this.state.uploadingImage ? (
+                      <ActivityIndicator color={themeColors.textSecondary} size="small" />
+                    ) : (
+                      <Icon name="camera" family="Feather" size={22} color={themeColors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+
                   <TextInput
                     value={inputText}
                     onChangeText={inputText => this.setState({ inputText })}
@@ -635,6 +722,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOpacity: 0.02,
     elevation: 1
+  },
+  cameraButton: {
+    padding: 8,
+    justifyContent: "center",
+    alignItems: "center"
   },
   inputWrapper: {
     width: "100%",
