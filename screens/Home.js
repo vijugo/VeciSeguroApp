@@ -105,7 +105,8 @@ class Home extends React.Component {
     imageErrors: {},
     deviceSearchQuery: '',
     alertSearchQuery: '',
-    darkMode: true
+    darkMode: true,
+    activeEmergency: null
   };
 
   startPulse = () => {
@@ -205,11 +206,8 @@ class Home extends React.Component {
             }
           ];
           const selected = mockDevices[0];
-          this.setState({ 
-            userDevices: mockDevices,
-            selectedDevice: selected
-          });
-          this.loadDeviceAlerts(selected.imei);
+          this.setState({ userDevices: mockDevices });
+          this.selectDevice(selected);
         } else if (cleanPhone === '3106667094' || cleanPhone === '+573106667094') {
           // Fallback de desarrollo para simulación con datos reales de Jorge Perez
           const mockProfile = {
@@ -258,17 +256,93 @@ class Home extends React.Component {
             }
           ];
           const selected = mockDevices[0];
-          this.setState({ 
-            userDevices: mockDevices,
-            selectedDevice: selected
-          });
-          this.loadDeviceAlerts(selected.imei);
+          this.setState({ userDevices: mockDevices });
+          this.selectDevice(selected);
         }
       }
     } catch (err) {
       console.error("DEBUG: Error leyendo AsyncStorage:", err);
     }
   }
+
+  componentWillUnmount() {
+    if (this.alertLogsSubscription) {
+      supabase.removeChannel(this.alertLogsSubscription);
+    }
+  }
+
+  selectDevice = (dev) => {
+    if (!dev) return;
+    this.setState({ selectedDevice: dev }, () => {
+      this.loadDeviceAlerts(dev.imei);
+      this.subscribeToAlertLogs(dev.imei);
+      this.checkActiveEmergencies(dev.imei);
+    });
+  };
+
+  subscribeToAlertLogs = (imei) => {
+    if (this.alertLogsSubscription) {
+      supabase.removeChannel(this.alertLogsSubscription);
+    }
+
+    console.log(`DEBUG: 📡 Suscribiéndose a alert_logs en tiempo real para equipo: ${imei}`);
+
+    this.alertLogsSubscription = supabase
+      .channel(`alert-logs-${imei}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'alert_logs',
+          filter: `imei=eq.${imei}`
+        },
+        async (payload) => {
+          console.log("DEBUG: 🚨 Nueva alerta detectada en tiempo real:", payload.new);
+          const newAlert = payload.new;
+          const metadata = newAlert.metadata || {};
+          
+          this.setState({
+            activeEmergency: newAlert
+          });
+          
+          const myProfile = this.state.userProfile || {};
+          if (newAlert.user_id !== myProfile.id) {
+            const senderName = metadata.user_name || "Un vecino";
+            alert(`🚨 ¡ALERTA ACTIVA EN TU CUADRA!\n\n${senderName} ha activado la alerta "${newAlert.alert_name}".`);
+          }
+        }
+      )
+      .subscribe();
+  };
+
+  checkActiveEmergencies = async (imei) => {
+    try {
+      console.log("DEBUG: Comprobando si hay emergencias activas en el equipo:", imei);
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from('alert_logs')
+        .select('*')
+        .eq('imei', imei)
+        .gte('created_at', fifteenMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const latest = data[0];
+        const metadata = latest.metadata || {};
+        if (metadata.status === 'active') {
+          console.log("DEBUG: 🚨 Emergencia activa encontrada de hace poco:", latest.alert_name);
+          this.setState({ activeEmergency: latest });
+        }
+      }
+    } catch (e) {
+      console.warn("DEBUG: Error comprobando alertas activas:", e.message);
+    }
+  };
 
   loadUserDevices = async (profileId) => {
     try {
@@ -311,14 +385,8 @@ class Home extends React.Component {
           }
         ];
 
-        this.setState({ 
-          userDevices: finalDevices,
-          selectedDevice: selected
-        });
-
-        if (selected) {
-          this.loadDeviceAlerts(selected.imei);
-        }
+        this.setState({ userDevices: finalDevices });
+        this.selectDevice(selected);
       } else {
         console.log("DEBUG: El usuario no tiene ningún equipo asignado en user_devices. Cargando mock de desarrollo.");
         const mockDevices = [
@@ -348,11 +416,8 @@ class Home extends React.Component {
           }
         ];
         const selected = mockDevices[0];
-        this.setState({ 
-          userDevices: mockDevices,
-          selectedDevice: selected
-        });
-        this.loadDeviceAlerts(selected.imei);
+        this.setState({ userDevices: mockDevices });
+        this.selectDevice(selected);
       }
     } catch (err) {
       console.warn("DEBUG: Error al consultar equipos asignados. Cargando mock fallback:", err.message);
@@ -365,11 +430,8 @@ class Home extends React.Component {
         }
       ];
       const selected = mockDevices[0];
-      this.setState({ 
-        userDevices: mockDevices,
-        selectedDevice: selected
-      });
-      this.loadDeviceAlerts(selected.imei);
+      this.setState({ userDevices: mockDevices });
+      this.selectDevice(selected);
     }
   };
 
@@ -959,6 +1021,43 @@ class Home extends React.Component {
             </Block>
           </Block>
 
+          {/* BANNER DE EMERGENCIA ACTIVA VECISEGURO */}
+          {this.state.activeEmergency && (
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                const emergency = this.state.activeEmergency;
+                this.props.navigation.navigate("VeciChat", { alertLog: emergency });
+              }}
+              style={[
+                styles.emergencyBanner,
+                {
+                  backgroundColor: darkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEE2E2',
+                  borderColor: '#EF4444',
+                  borderWidth: 1
+                }
+              ]}
+            >
+              <Block row middle space="between" style={{ width: '100%' }}>
+                <Block row middle style={{ flex: 1 }}>
+                  <Block style={styles.emergencyBannerDot} />
+                  <Block style={{ flex: 1, marginLeft: 12 }}>
+                    <Text bold size={13} color="#EF4444" style={{ letterSpacing: 0.5 }}>
+                      🚨 EMERGENCIA EN TU CUADRA
+                    </Text>
+                    <Text bold size={15} color={themeColors.textPrimary} style={{ marginTop: 2 }}>
+                      {this.state.activeEmergency.alert_name}
+                    </Text>
+                    <Text size={11} color={themeColors.textSecondary} style={{ marginTop: 2 }}>
+                      Por: {this.state.activeEmergency.metadata?.user_name || "Un vecino"} • ¡Pulsa aquí para el Chat!
+                    </Text>
+                  </Block>
+                </Block>
+                <Icon name="chevron-right" family="Feather" size={24} color="#EF4444" />
+              </Block>
+            </TouchableOpacity>
+          )}
+
           {/* Selector Horizontal de Equipos (Fácil acceso superior) */}
           <Block style={{ marginTop: 20, marginBottom: 5, width: '100%' }}>
             <Text bold size={11} color={themeColors.textSecondary} style={{ letterSpacing: 0.5, marginBottom: 10 }}>
@@ -1005,10 +1104,7 @@ class Home extends React.Component {
                             return (
                               <TouchableOpacity 
                                 key={dev.imei}
-                                onPress={() => {
-                                  this.setState({ selectedDevice: dev });
-                                  this.loadDeviceAlerts(dev.imei);
-                                }}
+                                onPress={() => this.selectDevice(dev)}
                                 style={[
                                   styles.horizontalDeviceCard, 
                                   { 
@@ -1494,6 +1590,23 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOpacity: 0.08,
     elevation: 3,
+  },
+  emergencyBanner: {
+    width: '100%',
+    padding: 14,
+    borderRadius: 20,
+    marginBottom: 5,
+    shadowColor: '#EF4444',
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    shadowOpacity: 0.1,
+    elevation: 3,
+  },
+  emergencyBannerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
   }
 });
 

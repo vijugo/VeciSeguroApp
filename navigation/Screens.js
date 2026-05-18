@@ -17,6 +17,7 @@ import Profile from "../screens/Profile";
 import React from "react";
 import Register from "../screens/Register";
 import About from "../screens/About";
+import VeciChat from "../screens/VeciChat";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -211,6 +212,14 @@ function HomeStack(props) {
             />
           ),
           headerTransparent: true,
+        }}
+      />
+      <Stack.Screen
+        name="VeciChat"
+        component={VeciChat}
+        options={{
+          headerShown: false,
+          cardStyle: { backgroundColor: "transparent" }
         }}
       />
     </Stack.Navigator>
