@@ -155,23 +155,14 @@ function HomeStack(props) {
     <Stack.Navigator
       screenOptions={{
         mode: "card",
-        headerShown: "screen",
+        headerShown: false,
       }}
     >
       <Stack.Screen
         name="HomeScreen"
         component={Home}
         options={{
-          header: ({ navigation, scene }) => (
-            <Header
-              title="Home"
-              search
-              options
-              navigation={navigation}
-              scene={scene}
-            />
-          ),
-          cardStyle: { backgroundColor: "#F8F9FE" },
+          cardStyle: { backgroundColor: "transparent" },
         }}
       />
       <Stack.Screen
