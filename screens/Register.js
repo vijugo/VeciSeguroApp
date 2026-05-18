@@ -23,7 +23,6 @@ const { width, height } = Dimensions.get("window");
 class Register extends React.Component {
   state = {
     phone: '',
-    email: '',
     password: '',
     fullName: '',
     otp: '',
@@ -32,7 +31,6 @@ class Register extends React.Component {
     mode: 'login', // 'login', 'register', 'forgot_password', 'verify_signup', 'verify_reset', 'set_new_password'
     showPassword: false,
     showNewPassword: false,
-    activeTab: 'admin', // 'admin' or 'vecino'
   };
 
   async componentDidMount() {
@@ -48,47 +46,26 @@ class Register extends React.Component {
   }
 
   handleLoginWithPassword = async () => {
-    const { phone, email, password, activeTab } = this.state;
+    const { phone, password } = this.state;
     
-    if (activeTab === 'admin') {
-      if (!email || !password) {
-        alert("Por favor ingresa tu correo electrónico y contraseña");
-        return;
-      }
-      this.setState({ loading: true });
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password,
-        });
-        if (error) throw error;
-        await AsyncStorage.setItem('user_phone', email.trim());
-        this.props.navigation.navigate("App");
-      } catch (error) {
-        alert(error.message);
-      } finally {
-        this.setState({ loading: false });
-      }
-    } else {
-      if (!phone || !password) {
-        alert("Por favor ingresa tu número de celular y contraseña");
-        return;
-      }
-      this.setState({ loading: true });
-      try {
-        const formattedPhone = phone.startsWith("+") ? phone : `+57${phone}`;
-        const { data, error } = await supabase.auth.signInWithPassword({
-          phone: formattedPhone,
-          password: password,
-        });
-        if (error) throw error;
-        await AsyncStorage.setItem('user_phone', formattedPhone);
-        this.props.navigation.navigate("App");
-      } catch (error) {
-        alert(error.message);
-      } finally {
-        this.setState({ loading: false });
-      }
+    if (!phone || !password) {
+      alert("Por favor ingresa tu número de celular y contraseña");
+      return;
+    }
+    this.setState({ loading: true });
+    try {
+      const formattedPhone = phone.startsWith("+") ? phone : `+57${phone}`;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        phone: formattedPhone,
+        password: password,
+      });
+      if (error) throw error;
+      await AsyncStorage.setItem('user_phone', formattedPhone);
+      this.props.navigation.navigate("App");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      this.setState({ loading: false });
     }
   };
 
@@ -249,7 +226,7 @@ class Register extends React.Component {
     const { mode } = this.state;
     switch (mode) {
       case 'login':
-        return "Ingresa tus credenciales para acceder al panel de control de seguridad.";
+        return "Ingresa tus credenciales para acceder a la aplicación de seguridad.";
       case 'register':
         return "Crea una cuenta para proteger a tu barrio.";
       case 'forgot_password':
@@ -265,7 +242,7 @@ class Register extends React.Component {
   };
 
   render() {
-    const { mode, loading, phone, email, password, fullName, otp, newPassword, showPassword, showNewPassword, activeTab } = this.state;
+    const { mode, loading, phone, password, fullName, otp, newPassword, showPassword, showNewPassword } = this.state;
 
     return (
       <SafeAreaView style={styles.safeContainer}>
@@ -286,7 +263,7 @@ class Register extends React.Component {
 
             {/* Title & Subtitle */}
             <Text style={styles.titleText}>
-              VeciSeguro <Text style={styles.blueTitleText}>Cloud</Text>
+              VeciSeguro <Text style={styles.blueTitleText}>App</Text>
             </Text>
             <Text style={styles.subtitleText}>
               {this.renderHeaderSubtitle()}
@@ -295,55 +272,18 @@ class Register extends React.Component {
             {/* --- MODE: LOGIN --- */}
             {mode === 'login' && (
               <Block style={styles.formContainer}>
-                {/* Segmented Tab Selector */}
-                <Block row style={styles.tabContainer}>
-                  <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'admin' && styles.tabButtonActive]}
-                    onPress={() => this.setState({ activeTab: 'admin' })}
-                    activeOpacity={0.9}
-                  >
-                    <Text style={[styles.tabText, activeTab === 'admin' && styles.tabTextActive]}>
-                      Administrador
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tabButton, activeTab === 'vecino' && styles.tabButtonActive]}
-                    onPress={() => this.setState({ activeTab: 'vecino' })}
-                    activeOpacity={0.9}
-                  >
-                    <Text style={[styles.tabText, activeTab === 'vecino' && styles.tabTextActive]}>
-                      Vecino
-                    </Text>
-                  </TouchableOpacity>
-                </Block>
-
                 {/* Fields */}
-                {activeTab === 'admin' ? (
-                  <Block style={styles.inputGroup}>
-                    <Text style={styles.fieldLabel}>Correo Electrónico</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="admin@veciseguro.com"
-                      placeholderTextColor="#94A3B8"
-                      value={email}
-                      onChangeText={(text) => this.setState({ email: text })}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                    />
-                  </Block>
-                ) : (
-                  <Block style={styles.inputGroup}>
-                    <Text style={styles.fieldLabel}>Número de celular</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      placeholder="316 234 6645"
-                      placeholderTextColor="#94A3B8"
-                      value={phone}
-                      onChangeText={(text) => this.setState({ phone: text })}
-                      keyboardType="phone-pad"
-                    />
-                  </Block>
-                )}
+                <Block style={styles.inputGroup}>
+                  <Text style={styles.fieldLabel}>Número de celular</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="316 234 6645"
+                    placeholderTextColor="#94A3B8"
+                    value={phone}
+                    onChangeText={(text) => this.setState({ phone: text })}
+                    keyboardType="phone-pad"
+                  />
+                </Block>
 
                 <Block style={styles.inputGroup}>
                   <Text style={styles.fieldLabel}>Contraseña</Text>
@@ -649,7 +589,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: height * 0.05,
+    paddingTop: height * 0.08,
     paddingBottom: 20,
     alignItems: "center",
     flexGrow: 1
@@ -687,47 +627,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingHorizontal: 16,
     lineHeight: 20,
-    marginBottom: 28,
+    marginBottom: 36,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif'
   },
   formContainer: {
     width: "100%",
     maxWidth: 400
   },
-  tabContainer: {
-    backgroundColor: "#F1F5F9",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 24,
-    width: "100%"
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 8
-  },
-  tabButtonActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    shadowOpacity: 0.06,
-    elevation: 2
-  },
-  tabText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748B"
-  },
-  tabTextActive: {
-    color: "#0F172A",
-    fontWeight: "700"
-  },
   inputGroup: {
     width: "100%",
-    marginBottom: 20
+    marginBottom: 22
   },
   fieldLabel: {
     fontSize: 14,
@@ -774,7 +683,7 @@ const styles = StyleSheet.create({
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
+    marginTop: 12,
     shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
@@ -790,7 +699,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 22,
+    marginTop: 24,
     marginBottom: 10
   },
   footerLinkText: {
