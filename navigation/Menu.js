@@ -1,9 +1,9 @@
 import { Block, Text, theme } from "galio-framework";
-import { Image, ScrollView, StyleSheet } from "react-native";
-
+import { Image, ScrollView, StyleSheet, Appearance } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DrawerItem as DrawerCustomItem } from "../components";
 import Images from "../constants/Images";
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 function CustomDrawerContent({
   drawerPosition,
@@ -13,10 +13,37 @@ function CustomDrawerContent({
   state,
   ...rest
 }) {
-    const screens = ["Home", "Profile", "History", "Notifications", "About", "Account"];
+  const screens = ["Home", "Profile", "History", "Notifications", "About", "Account"];
+  const [darkMode, setDarkMode] = useState(true);
+
+  useEffect(() => {
+    const loadTheme = async () => {
+      try {
+        const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
+        if (savedMode !== null) {
+          setDarkMode(JSON.parse(savedMode));
+        } else {
+          setDarkMode(Appearance.getColorScheme() === "dark");
+        }
+      } catch (e) {
+        console.log("Error loading dark mode in Menu", e);
+      }
+    };
+    loadTheme();
+
+    // Actualizar cada vez que cambie el estado de navegación (por ejemplo, al abrir el menú)
+    const unsubscribe = navigation.addListener("state", () => {
+      loadTheme();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [navigation]);
+
   return (
     <Block
-      style={styles.container}
+      style={[styles.container, { backgroundColor: darkMode ? "#0B0F19" : "#FFFFFF" }]}
       forceInset={{ top: "always", horizontal: "never" }}
     >
       <Block flex={0.06} style={styles.header}>
@@ -31,6 +58,7 @@ function CustomDrawerContent({
                 key={index}
                 navigation={navigation}
                 focused={state.index === index ? true : false}
+                darkMode={darkMode}
               />
             );
           })}

@@ -7,7 +7,7 @@ import argonTheme from "../constants/Theme";
 
 class DrawerItem extends React.Component {
   renderIcon = () => {
-    const { title, focused } = this.props;
+    const { title, focused, darkMode } = this.props;
 
     switch (title) {
       case "Home":
@@ -78,7 +78,7 @@ class DrawerItem extends React.Component {
           name="spaceship"
           family="ArgonExtra"
           size={14}
-          color={focused ? "white" : "rgba(0,0,0,0.5)"}
+          color={focused ? "white" : (darkMode ? "rgba(255, 255, 255, 0.6)" : "rgba(0,0,0,0.5)")}
         />);
       case "About":
         return (
@@ -95,7 +95,7 @@ class DrawerItem extends React.Component {
   };
 
   render() {
-    const { focused, title, navigation } = this.props;
+    const { focused, title, navigation, darkMode } = this.props;
 
     const containerStyles = [
       styles.defaultStyle,
@@ -109,6 +109,10 @@ class DrawerItem extends React.Component {
     if (title === "Notifications") displayTitle = "Personalizar Alertas";
     if (title === "Account") displayTitle = "Cerrar Sesión";
     if (title === "About") displayTitle = "Acerca de";
+
+    const textColor = focused 
+      ? "white" 
+      : (darkMode ? "rgba(255, 255, 255, 0.6)" : "rgba(0, 0, 0, 0.5)");
 
     return (
       <TouchableOpacity
@@ -129,7 +133,7 @@ class DrawerItem extends React.Component {
             <Text
               size={15}
               bold={focused ? true : false}
-              color={focused ? "white" : "rgba(0,0,0,0.5)"}
+              color={textColor}
             >
               {displayTitle}
             </Text>

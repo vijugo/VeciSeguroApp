@@ -293,7 +293,7 @@ function AppStack(props) {
       screenOptions={{
         headerShown: false,
         drawerStyle: {
-          backgroundColor: "white",
+          backgroundColor: "transparent",
           width: width * 0.8,
         },
         drawerActiveTintColor: "white",
