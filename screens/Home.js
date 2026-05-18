@@ -140,6 +140,13 @@ class Home extends React.Component {
     // Iniciar animación del botón SOS
     this.startPulse();
     
+    // Actualizar estado de emergencias cuando se vuelve a la pantalla
+    this._unsubscribeFocus = this.props.navigation.addListener('focus', () => {
+      if (this.state.selectedDevice) {
+        this.checkActiveEmergencies(this.state.selectedDevice.imei);
+      }
+    });
+    
     // 1. Configurar MQTT
     this.connectMQTT();
 
@@ -269,6 +276,9 @@ class Home extends React.Component {
     if (this.alertLogsSubscription) {
       supabase.removeChannel(this.alertLogsSubscription);
     }
+    if (this._unsubscribeFocus) {
+      this._unsubscribeFocus();
+    }
   }
 
   selectDevice = (dev) => {
@@ -350,6 +360,15 @@ class Home extends React.Component {
         if (metadata.status === 'active') {
           console.log("DEBUG: 🚨 Emergencia activa encontrada de hace poco:", latest.alert_name);
           this.setState({ activeEmergency: latest });
+        } else {
+          // La alerta más reciente no está activa, limpiar banner
+          if (this.state.activeEmergency) {
+            this.setState({ activeEmergency: null });
+          }
+        }
+      } else {
+        if (this.state.activeEmergency) {
+          this.setState({ activeEmergency: null });
         }
       }
     } catch (e) {
