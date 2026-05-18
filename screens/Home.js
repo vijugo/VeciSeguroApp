@@ -161,9 +161,13 @@ class Home extends React.Component {
     this.connectMQTT();
 
     // 2. Pedir permisos de ubicación
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      alert('Se requiere permiso de ubicación para reportar emergencias.');
+    try {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Se requiere permiso de ubicación para reportar emergencias.');
+      }
+    } catch (e) {
+      console.log("DEBUG: Error solicitando permisos de ubicación en Home:", e.message);
     }
 
     // 3. Leer el teléfono de la memoria (AsyncStorage)
@@ -285,46 +289,50 @@ class Home extends React.Component {
   }
 
   registerForPushNotificationsAsync = async (profileId) => {
-    let token;
-    
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
+    try {
+      let token;
+      
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
 
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      if (finalStatus !== 'granted') {
-        console.log('DEBUG: Failed to get push token for push notification!');
-        return;
-      }
-      try {
-        token = (await Notifications.getExpoPushTokenAsync({
-          projectId: 'ce1d3f55-144a-4a25-83c7-43cf1815db4c'
-        })).data;
-        console.log("DEBUG: Expo Push Token obtenido:", token);
-        
-        // Guardar token en supabase
-        if (token && profileId) {
-          await supabase
-            .from('profiles')
-            .update({ push_token: token })
-            .eq('id', profileId);
+      if (Device.isDevice) {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
         }
-      } catch (e) {
-        console.log("DEBUG: Error obteniendo token push", e);
+        if (finalStatus !== 'granted') {
+          console.log('DEBUG: Failed to get push token for push notification!');
+          return;
+        }
+        try {
+          token = (await Notifications.getExpoPushTokenAsync({
+            projectId: 'ce1d3f55-144a-4a25-83c7-43cf1815db4c'
+          })).data;
+          console.log("DEBUG: Expo Push Token obtenido:", token);
+          
+          // Guardar token en supabase
+          if (token && profileId) {
+            await supabase
+              .from('profiles')
+              .update({ push_token: token })
+              .eq('id', profileId);
+          }
+        } catch (e) {
+          console.log("DEBUG: Error obteniendo token push", e);
+        }
+      } else {
+        console.log('DEBUG: Must use physical device for Push Notifications');
       }
-    } else {
-      console.log('DEBUG: Must use physical device for Push Notifications');
+    } catch (err) {
+      console.log("DEBUG: Error en registro de notificaciones push:", err.message);
     }
   };
 
@@ -573,7 +581,6 @@ class Home extends React.Component {
         }
       ];
       this.setState({ activeAlerts: mock5, loadingAlerts: false });
-      alert("🧪 PLAYGROUND: Cargadas 5 alertas de simulación.");
       return;
     }
 
@@ -728,7 +735,6 @@ class Home extends React.Component {
         }
       ];
       this.setState({ activeAlerts: mock20, loadingAlerts: false });
-      alert("🧪 PLAYGROUND: Cargadas 20 alertas de simulación.");
       return;
     }
 
@@ -825,9 +831,6 @@ class Home extends React.Component {
             logo_url: 'https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.019638656330525195.jpg',
           }
         ];
-      } else {
-        // Alerta de diagnostico temporal para desarrollo
-        alert(`🎯 ¡EXITO! Se cargaron ${activeAlerts.length} alertas reales desde la Base de Datos para este equipo.`);
       }
 
       // Consultar volumen y repeticiones de este dispositivo en tiempo real para sincronizar con la plataforma

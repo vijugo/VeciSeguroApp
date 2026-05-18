@@ -46,8 +46,11 @@ function CustomDrawerContent({
       style={[styles.container, { backgroundColor: darkMode ? "#0B0F19" : "#FFFFFF" }]}
       forceInset={{ top: "always", horizontal: "never" }}
     >
-      <Block flex={0.12} style={styles.header}>
+      <Block flex={0.12} row style={[styles.header, { alignItems: "center" }]}>
         <Image style={styles.logo} source={Images.Logo} />
+        <Text bold size={20} color={darkMode ? "#FFFFFF" : "#1E293B"} style={{ marginLeft: 12 }}>
+          VeciSeguro
+        </Text>
       </Block>
       <Block flex style={{ paddingLeft: 8, paddingRight: 14 }}>
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
