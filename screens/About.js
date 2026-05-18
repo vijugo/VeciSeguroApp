@@ -111,7 +111,7 @@ class About extends React.Component {
           {/* Logo y Encabezado del Sistema */}
           <Block center style={styles.headerSection}>
             <Image
-              source={Images.Logo || require("../assets/imgs/logo.png")}
+              source={Images.Logo}
               style={styles.logoImage}
               resizeMode="contain"
             />
