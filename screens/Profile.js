@@ -44,6 +44,16 @@ class Profile extends React.Component {
   loadProfile = async () => {
     this.setState({ loading: true });
     try {
+      // Cargar preferencia de tema de AsyncStorage
+      try {
+        const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
+        if (savedMode !== null) {
+          this.setState({ darkMode: JSON.parse(savedMode) });
+        }
+      } catch (e) {
+        console.log("DEBUG: Error al cargar tema en Perfil:", e.message);
+      }
+
       // 0. Intentar precargar desde el caché local (AsyncStorage) para renderizado instantáneo
       const cachedAvatar = await AsyncStorage.getItem("user_avatar");
       const cachedName = await AsyncStorage.getItem("user_fullname");
@@ -396,9 +406,9 @@ class Profile extends React.Component {
   };
 
   render() {
-    const { fullName, phone, email, avatarUrl, newPassword, confirmPassword, loading, saving } = this.state;
+    const { fullName, phone, email, avatarUrl, newPassword, confirmPassword, loading, saving, darkMode } = this.state;
 
-    const themeColors = {
+    const themeColors = darkMode ? {
       background: "#0B0F19",
       textPrimary: "#FFFFFF",
       textSecondary: "rgba(255, 255, 255, 0.4)",
@@ -408,6 +418,16 @@ class Profile extends React.Component {
       accent: "#6366F1",
       buttonBg: "#4F46E5",
       buttonShadow: "#4F46E5"
+    } : {
+      background: "#F8FAFC",
+      textPrimary: "#1E293B",
+      textSecondary: "rgba(30, 41, 59, 0.6)",
+      cardBackground: "#FFFFFF",
+      cardBorder: "rgba(0, 0, 0, 0.06)",
+      inputBg: "#F1F5F9",
+      accent: "#4F46E5",
+      buttonBg: "#4F46E5",
+      buttonShadow: "rgba(79, 70, 229, 0.2)"
     };
 
     if (loading) {
@@ -447,10 +467,10 @@ class Profile extends React.Component {
                   <Icon name="camera" family="Feather" size={14} color="white" />
                 </Block>
               </TouchableOpacity>
-              <Text bold size={24} color="white" style={{ marginTop: 15, textAlign: "center" }}>
+              <Text bold size={24} color={themeColors.textPrimary} style={{ marginTop: 15, textAlign: "center" }}>
                 {fullName || "Vecino de VeciSeguro"}
               </Text>
-              <Text size={14} color="#94A3B8" style={{ marginTop: 4, opacity: 0.8 }}>
+              <Text size={14} color={themeColors.textSecondary} style={{ marginTop: 4, opacity: 0.8 }}>
                 {email || "Sin correo electrónico"}
               </Text>
             </Block>
@@ -467,7 +487,7 @@ class Profile extends React.Component {
 
               {/* Input: Nombre Completo */}
               <Block style={styles.inputGroup}>
-                <Text bold size={10} color="white" style={styles.inputLabel}>
+                <Text bold size={10} color={themeColors.textPrimary} style={styles.inputLabel}>
                   NOMBRE COMPLETO
                 </Text>
                 <Input
@@ -475,9 +495,9 @@ class Profile extends React.Component {
                   value={fullName}
                   onChangeText={(text) => this.setState({ fullName: text })}
                   placeholder="Tu nombre completo"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={darkMode ? "rgba(255,255,255,0.3)" : "rgba(30,41,59,0.4)"}
                   style={[styles.premiumInput, { backgroundColor: themeColors.inputBg }]}
-                  color="white"
+                  color={themeColors.textPrimary}
                   iconContent={
                     <Icon name="user" family="Feather" size={15} color="#94A3B8" />
                   }
@@ -486,7 +506,7 @@ class Profile extends React.Component {
 
               {/* Input: Teléfono Celular */}
               <Block style={styles.inputGroup}>
-                <Text bold size={10} color="white" style={styles.inputLabel}>
+                <Text bold size={10} color={themeColors.textPrimary} style={styles.inputLabel}>
                   TELÉFONO CELULAR
                 </Text>
                 <Input
@@ -494,10 +514,10 @@ class Profile extends React.Component {
                   value={phone}
                   onChangeText={(text) => this.setState({ phone: text })}
                   placeholder="Ej: +573123456789"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={darkMode ? "rgba(255,255,255,0.3)" : "rgba(30,41,59,0.4)"}
                   keyboardType="phone-pad"
                   style={[styles.premiumInput, { backgroundColor: themeColors.inputBg }]}
-                  color="white"
+                  color={themeColors.textPrimary}
                   iconContent={
                     <Icon name="phone" family="Feather" size={15} color="#94A3B8" />
                   }
@@ -506,7 +526,7 @@ class Profile extends React.Component {
 
               {/* Input: Correo Electrónico */}
               <Block style={styles.inputGroup}>
-                <Text bold size={10} color="white" style={styles.inputLabel}>
+                <Text bold size={10} color={themeColors.textPrimary} style={styles.inputLabel}>
                   CORREO ELECTRÓNICO
                 </Text>
                 <Input
@@ -514,10 +534,10 @@ class Profile extends React.Component {
                   value={email}
                   onChangeText={(text) => this.setState({ email: text })}
                   placeholder="ejemplo@correo.com"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={darkMode ? "rgba(255,255,255,0.3)" : "rgba(30,41,59,0.4)"}
                   keyboardType="email-address"
                   style={[styles.premiumInput, { backgroundColor: themeColors.inputBg }]}
-                  color="white"
+                  color={themeColors.textPrimary}
                   iconContent={
                     <Icon name="mail" family="Feather" size={15} color="#94A3B8" />
                   }
@@ -538,7 +558,7 @@ class Profile extends React.Component {
 
               {/* Input: Nueva Contraseña */}
               <Block style={styles.inputGroup}>
-                <Text bold size={10} color="white" style={styles.inputLabel}>
+                <Text bold size={10} color={themeColors.textPrimary} style={styles.inputLabel}>
                   NUEVA CONTRASEÑA
                 </Text>
                 <Input
@@ -547,9 +567,9 @@ class Profile extends React.Component {
                   value={newPassword}
                   onChangeText={(text) => this.setState({ newPassword: text })}
                   placeholder="Dejar en blanco para no cambiar"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={darkMode ? "rgba(255,255,255,0.3)" : "rgba(30,41,59,0.4)"}
                   style={[styles.premiumInput, { backgroundColor: themeColors.inputBg }]}
-                  color="white"
+                  color={themeColors.textPrimary}
                   iconContent={
                     <Icon name="key" family="Feather" size={15} color="#94A3B8" />
                   }
@@ -558,7 +578,7 @@ class Profile extends React.Component {
 
               {/* Input: Confirmar Contraseña */}
               <Block style={styles.inputGroup}>
-                <Text bold size={10} color="white" style={styles.inputLabel}>
+                <Text bold size={10} color={themeColors.textPrimary} style={styles.inputLabel}>
                   CONFIRMAR CONTRASEÑA
                 </Text>
                 <Input
@@ -567,9 +587,9 @@ class Profile extends React.Component {
                   value={confirmPassword}
                   onChangeText={(text) => this.setState({ confirmPassword: text })}
                   placeholder="Repite la nueva contraseña"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  placeholderTextColor={darkMode ? "rgba(255,255,255,0.3)" : "rgba(30,41,59,0.4)"}
                   style={[styles.premiumInput, { backgroundColor: themeColors.inputBg }]}
-                  color="white"
+                  color={themeColors.textPrimary}
                   iconContent={
                     <Icon name="check-circle" family="Feather" size={15} color="#94A3B8" />
                   }

@@ -7,7 +7,8 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Switch,
-  Alert
+  Alert,
+  Image
 } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -18,19 +19,6 @@ import { supabase } from "../constants/Supabase";
 
 const { width } = Dimensions.get("screen");
 
-const themeColors = {
-  background: "#0B0F19",
-  textPrimary: "#FFFFFF",
-  textSecondary: "rgba(255, 255, 255, 0.4)",
-  cardBackground: "rgba(255, 255, 255, 0.03)",
-  cardBorder: "rgba(255, 255, 255, 0.06)",
-  accent: "#6366F1", // Indigo premium
-  success: "#10B981", // Emerald neon
-  inputBg: "rgba(255, 255, 255, 0.04)",
-  buttonBg: "#6366F1",
-  buttonShadow: "rgba(99, 102, 241, 0.4)"
-};
-
 class Notifications extends React.Component {
   state = {
     loading: true,
@@ -38,7 +26,8 @@ class Notifications extends React.Component {
     userProfile: null,
     selectedDevice: null,
     alerts: [],
-    preferences: {} // { "ALERTA ACOSO": true, "ENFERMERÍA": false, ... }
+    preferences: {}, // { "ALERTA ACOSO": true, "ENFERMERÍA": false, ... }
+    darkMode: true
   };
 
   async componentDidMount() {
@@ -48,6 +37,16 @@ class Notifications extends React.Component {
   loadPreferencesAndAlerts = async () => {
     this.setState({ loading: true });
     try {
+      // 0. Cargar preferencia de tema de AsyncStorage
+      try {
+        const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
+        if (savedMode !== null) {
+          this.setState({ darkMode: JSON.parse(savedMode) });
+        }
+      } catch (e) {
+        console.log("DEBUG: Error al cargar tema en Notificaciones:", e.message);
+      }
+
       // 1. Obtener teléfono guardado para buscar el perfil
       const savedPhone = await AsyncStorage.getItem("@veciseguro:saved_phone");
       let cleanPhone = savedPhone ? savedPhone.trim() : "";
@@ -112,11 +111,11 @@ class Notifications extends React.Component {
       } else {
         // Alertas por defecto si falla la red o es offline
         deviceAlerts = [
-          { id: 1, name: "ALERTA ACOSO", folder: "01", filename: "022.mp3" },
-          { id: 2, name: "APOYO SEGURIDAD", folder: "01", filename: "018.mp3" },
-          { id: 3, name: "ALERTA COMUNITARIA", folder: "01", filename: "001.mp3" },
-          { id: 4, name: "CAMIÓN BASURA", folder: "01", filename: "024.mp3" },
-          { id: 5, name: "ENFERMERÍA", folder: "01", filename: "031.mp3" }
+          { id: 1, name: "ALERTA ACOSO", folder: "01", filename: "022.mp3", logoUrl: "https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.036984342417753724.jpg" },
+          { id: 2, name: "APOYO SEGURIDAD", folder: "01", filename: "018.mp3", logoUrl: "https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.44202624317780237.png" },
+          { id: 3, name: "ALERTA COMUNITARIA", folder: "01", filename: "001.mp3", logoUrl: "https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.019638656330525195.jpg" },
+          { id: 4, name: "CAMIÓN BASURA", folder: "01", filename: "024.mp3", logoUrl: "https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.34251122646778.png" },
+          { id: 5, name: "ENFERMERÍA", folder: "01", filename: "031.mp3", logoUrl: "https://dxautkeaaxayfshxwaiq.supabase.co/storage/v1/object/public/alert-assets/logos/0.22678617542065238.jpg" }
         ];
       }
 
@@ -174,11 +173,10 @@ class Notifications extends React.Component {
       // Sincronizar también con Supabase en el perfil del usuario para que el backend pueda consultarlo
       const { userProfile } = this.state;
       if (userProfile && !userProfile.isMock) {
-        // Si tienes una columna metadata o queremos persistirla
+        // Guardar fecha de actualización en Supabase de forma resiliente
         await supabase
           .from("profiles")
           .update({
-            // Guardar configuración en una columna genérica si existe, o al menos intentarlo de forma resiliente
             updated_at: new Date().toISOString()
           })
           .eq("id", userProfile.id);
@@ -196,8 +194,8 @@ class Notifications extends React.Component {
     }
   };
 
-  renderAlertsList = () => {
-    const { alerts, preferences } = this.state;
+  renderAlertsList = (themeColors) => {
+    const { alerts, preferences, darkMode } = this.state;
 
     if (alerts.length === 0) {
       return (
@@ -220,6 +218,8 @@ class Notifications extends React.Component {
 
         {alerts.map((alert, index) => {
           const isEnabled = preferences[alert.name] !== false;
+          const hasLogo = alert.logoUrl && alert.logoUrl.trim().startsWith("http");
+
           return (
             <Block
               key={alert.id || index}
@@ -232,16 +232,24 @@ class Notifications extends React.Component {
               ]}
             >
               <Block row middle flex={0.75}>
-                <Block style={styles.iconWrapper}>
-                  <Icon
-                    name={isEnabled ? "bell" : "bell-off"}
-                    family="Feather"
-                    size={16}
-                    color={isEnabled ? themeColors.success : themeColors.textSecondary}
-                  />
+                <Block style={[styles.iconWrapper, { backgroundColor: darkMode ? "rgba(255, 255, 255, 0.03)" : "rgba(0, 0, 0, 0.03)" }]}>
+                  {hasLogo ? (
+                    <Image
+                      source={{ uri: alert.logoUrl }}
+                      style={{ width: 26, height: 26, borderRadius: 6 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Icon
+                      name={isEnabled ? "bell" : "bell-off"}
+                      family="Feather"
+                      size={16}
+                      color={isEnabled ? themeColors.success : themeColors.textSecondary}
+                    />
+                  )}
                 </Block>
                 <Block style={{ marginLeft: 12 }}>
-                  <Text bold size={13} color="white">
+                  <Text bold size={13} color={themeColors.textPrimary}>
                     {alert.name}
                   </Text>
                   <Text size={10} color={themeColors.textSecondary} style={{ marginTop: 2 }}>
@@ -254,9 +262,9 @@ class Notifications extends React.Component {
                 <Switch
                   value={isEnabled}
                   onValueChange={() => this.handleToggleAlert(alert.name)}
-                  trackColor={{ false: "#1E293B", true: "rgba(16, 185, 129, 0.3)" }}
-                  thumbColor={isEnabled ? themeColors.success : "#94A3B8"}
-                  ios_backgroundColor="#1E293B"
+                  trackColor={{ false: darkMode ? "#1E293B" : "#E2E8F0", true: "rgba(16, 185, 129, 0.3)" }}
+                  thumbColor={isEnabled ? themeColors.success : (darkMode ? "#94A3B8" : "#64748B")}
+                  ios_backgroundColor={darkMode ? "#1E293B" : "#E2E8F0"}
                 />
               </Block>
             </Block>
@@ -267,7 +275,31 @@ class Notifications extends React.Component {
   };
 
   render() {
-    const { loading, saving } = this.state;
+    const { loading, saving, darkMode } = this.state;
+
+    const themeColors = darkMode ? {
+      background: "#0B0F19",
+      textPrimary: "#FFFFFF",
+      textSecondary: "rgba(255, 255, 255, 0.4)",
+      cardBackground: "rgba(255, 255, 255, 0.03)",
+      cardBorder: "rgba(255, 255, 255, 0.06)",
+      accent: "#6366F1", // Indigo premium
+      success: "#10B981", // Emerald neon
+      inputBg: "rgba(255, 255, 255, 0.04)",
+      buttonBg: "#6366F1",
+      buttonShadow: "rgba(99, 102, 241, 0.4)"
+    } : {
+      background: "#F8FAFC",
+      textPrimary: "#1E293B",
+      textSecondary: "rgba(30, 41, 59, 0.6)",
+      cardBackground: "#FFFFFF",
+      cardBorder: "rgba(0, 0, 0, 0.06)",
+      accent: "#4F46E5",
+      success: "#10B981",
+      inputBg: "#F1F5F9",
+      buttonBg: "#4F46E5",
+      buttonShadow: "rgba(79, 70, 229, 0.2)"
+    };
 
     return (
       <Block flex style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -276,7 +308,7 @@ class Notifications extends React.Component {
           back
           title="Personalizar Alertas"
           navigation={this.props.navigation}
-          white
+          white={darkMode}
         />
 
         {loading ? (
@@ -293,8 +325,8 @@ class Notifications extends React.Component {
           >
             {/* Header explicativo premium */}
             <Block style={styles.headerSection}>
-              <Text bold size={24} color="white">
-                Notificaciones 🔔
+              <Text bold size={24} color={themeColors.textPrimary}>
+                Notificaciones {darkMode ? "🔔" : "☀️"}
               </Text>
               <Text size={13} color={themeColors.textSecondary} style={{ marginTop: 8, lineHeight: 20 }}>
                 Decide cuáles alertas comunitarias deseas recibir en tu teléfono móvil y cuáles prefieres silenciar para evitar interrupciones.
@@ -302,7 +334,7 @@ class Notifications extends React.Component {
             </Block>
 
             {/* Listado de Alertas */}
-            {this.renderAlertsList()}
+            {this.renderAlertsList(themeColors)}
 
             {/* Botón de guardar cambios */}
             <Block center style={{ marginTop: 10, marginBottom: 20 }}>
@@ -377,7 +409,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
     justifyContent: "center",
     alignItems: "center"
   },

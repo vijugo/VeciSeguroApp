@@ -125,9 +125,16 @@ class Home extends React.Component {
     ).start();
   };
 
-  async componentDidMount() {
-    console.log("DEBUG: Home se ha montado.");
-    
+    // Cargar preferencia de tema de AsyncStorage
+    try {
+      const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
+      if (savedMode !== null) {
+        this.setState({ darkMode: JSON.parse(savedMode) });
+      }
+    } catch (e) {
+      console.log("DEBUG: Error al cargar tema:", e.message);
+    }
+
     // Iniciar animación del botón SOS
     this.startPulse();
     
@@ -921,7 +928,11 @@ class Home extends React.Component {
             <Block row middle>
               <TouchableOpacity 
                 activeOpacity={0.7}
-                onPress={() => this.setState({ darkMode: !darkMode })}
+                onPress={async () => {
+                  const newMode = !darkMode;
+                  this.setState({ darkMode: newMode });
+                  await AsyncStorage.setItem("@veciseguro:dark_mode", JSON.stringify(newMode));
+                }}
                 style={{ 
                   marginRight: 10, 
                   backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', 
