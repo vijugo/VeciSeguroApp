@@ -125,6 +125,7 @@ class Home extends React.Component {
     ).start();
   };
 
+  async componentDidMount() {
     // Cargar preferencia de tema de AsyncStorage
     try {
       const savedMode = await AsyncStorage.getItem("@veciseguro:dark_mode");
