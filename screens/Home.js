@@ -5,8 +5,18 @@ import { Icon, Input } from '../components';
 import { argonTheme } from '../constants';
 import { supabase } from '../constants/Supabase';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 global.Buffer = Buffer; // Necesario para que MQTT funcione en React Native
 import mqtt from 'mqtt/dist/mqtt';
 const { width } = Dimensions.get('screen');
@@ -173,6 +183,7 @@ class Home extends React.Component {
           console.log("DEBUG: ¡Perfil encontrado!", profile.full_name);
           this.setState({ userProfile: profile });
           await this.loadUserDevices(profile.id);
+          this.registerForPushNotificationsAsync(profile.id);
         } else if (cleanPhone === '3162346645' || cleanPhone === '+573162346645') {
           // Fallback de desarrollo para simulación con datos reales de Víctor
           const mockProfile = {
@@ -271,6 +282,50 @@ class Home extends React.Component {
       console.error("DEBUG: Error leyendo AsyncStorage:", err);
     }
   }
+
+  registerForPushNotificationsAsync = async (profileId) => {
+    let token;
+    
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
+
+    if (Device.isDevice) {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log('DEBUG: Failed to get push token for push notification!');
+        return;
+      }
+      try {
+        token = (await Notifications.getExpoPushTokenAsync({
+          projectId: 'ce1d3f55-144a-4a25-83c7-43cf1815db4c' // Reemplazar si Expo requiere Project ID específico
+        })).data;
+        console.log("DEBUG: Expo Push Token obtenido:", token);
+        
+        // Guardar token en supabase
+        if (token && profileId) {
+          await supabase
+            .from('profiles')
+            .update({ push_token: token })
+            .eq('id', profileId);
+        }
+      } catch (e) {
+        console.log("DEBUG: Error obteniendo token push", e);
+      }
+    } else {
+      console.log('DEBUG: Must use physical device for Push Notifications');
+    }
+  };
 
   componentWillUnmount() {
     if (this.alertLogsSubscription) {
