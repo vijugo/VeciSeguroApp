@@ -52,20 +52,73 @@ class Register extends React.Component {
       alert("Por favor ingresa tu número de celular y contraseña");
       return;
     }
+    
     this.setState({ loading: true });
+    
     try {
       const formattedPhone = phone.startsWith("+") ? phone : `+57${phone}`;
-      const { data, error } = await supabase.auth.signInWithPassword({
-        phone: formattedPhone,
-        password: password,
-      });
-      if (error) throw error;
+      let loginSuccess = false;
+      let loginError = null;
+
+      try {
+        // Promesa de consulta a perfiles con timeout de 3.5 segundos
+        const profilesPromise = supabase
+          .from('profiles')
+          .select('email')
+          .eq('phone', formattedPhone);
+        
+        const timeoutPromise = new Promise((resolve) => 
+          setTimeout(() => resolve({ timeout: true }), 3500)
+        );
+
+        const result = await Promise.race([profilesPromise, timeoutPromise]);
+
+        if (result && !result.timeout && !result.error) {
+          const profiles = result.data || [];
+          if (profiles.length > 0) {
+            // Intentar iniciar sesión con cada correo encontrado
+            for (const profile of profiles) {
+              if (profile.email) {
+                try {
+                  const { data, error } = await supabase.auth.signInWithPassword({
+                    email: profile.email,
+                    password: password,
+                  });
+                  if (!error && data?.user) {
+                    loginSuccess = true;
+                    break;
+                  }
+                  if (error) loginError = error;
+                } catch (e) {
+                  loginError = e;
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("DEBUG: Error o timeout al resolver perfiles:", err.message);
+      }
+
+      // Si no logramos iniciar sesión con los correos, usar el fallback de celular nativo
+      if (!loginSuccess) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          phone: formattedPhone,
+          password: password,
+        });
+        if (error) {
+          throw loginError || error;
+        }
+      }
+
       await AsyncStorage.setItem('user_phone', formattedPhone);
+      this.setState({ loading: false });
       this.props.navigation.navigate("App");
     } catch (error) {
-      alert(error.message);
-    } finally {
       this.setState({ loading: false });
+      setTimeout(() => {
+        alert(error.message || "Error al iniciar sesión. Verifica tu contraseña.");
+      }, 100);
     }
   };
 

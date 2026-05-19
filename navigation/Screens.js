@@ -230,6 +230,7 @@ function HomeStack(props) {
 export default function OnboardingStack(props) {
   return (
     <Stack.Navigator
+      initialRouteName="Account"
       screenOptions={{
         mode: "card",
         headerShown: false,
