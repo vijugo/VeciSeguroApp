@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Dimensions, ScrollView, TouchableOpacity, Animated, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, Dimensions, ScrollView, TouchableOpacity, Animated, ActivityIndicator, Image, Platform } from 'react-native';
 import { Block, theme, Text, Button } from 'galio-framework';
 import { Icon, Input } from '../components';
 import { argonTheme } from '../constants';
@@ -9,6 +9,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
+import { startBackgroundBleService, getBleManager } from '../src/services/BlePanicService';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -100,6 +101,14 @@ const getAlertImageSource = (alertItem) => {
 };
 
 class Home extends React.Component {
+  _isMounted = true;
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     pulseAnim: new Animated.Value(1),
     isPressed: new Animated.Value(1),
@@ -116,7 +125,8 @@ class Home extends React.Component {
     deviceSearchQuery: '',
     alertSearchQuery: '',
     darkMode: true,
-    activeEmergency: null
+    activeEmergency: null,
+    bleStatus: 'searching' // searching, active, error
   };
 
   startPulse = () => {
@@ -155,6 +165,11 @@ class Home extends React.Component {
       if (this.state.selectedDevice) {
         this.checkActiveEmergencies(this.state.selectedDevice.imei);
       }
+      try {
+        startBackgroundBleService();
+      } catch (e) {
+        console.warn("DEBUG: Error al reiniciar BLE en Home focus:", e.message);
+      }
     });
     
     // 1. Configurar MQTT
@@ -186,6 +201,7 @@ class Home extends React.Component {
         if (profile) {
           console.log("DEBUG: ¡Perfil encontrado!", profile.full_name);
           this.setState({ userProfile: profile });
+          await AsyncStorage.setItem('user_profile_json', JSON.stringify(profile));
           await this.loadUserDevices(profile.id);
           this.registerForPushNotificationsAsync(profile.id);
         } else if (cleanPhone === '3162346645' || cleanPhone === '+573162346645') {
@@ -199,6 +215,7 @@ class Home extends React.Component {
           };
           console.log("DEBUG: ¡Perfil mockeado para pruebas locales!", mockProfile.full_name);
           this.setState({ userProfile: mockProfile });
+          await AsyncStorage.setItem('user_profile_json', JSON.stringify(mockProfile));
           this.registerForPushNotificationsAsync(mockProfile.id);
           
           // Cargar las dos sirenas asignadas a Víctor de su perfil real
@@ -214,18 +231,6 @@ class Home extends React.Component {
               alias: 'Prueba P4 VeciSeguro',
               lat: 4.6097,
               lng: -74.0817
-            },
-            {
-              imei: 'TEST-IMEI-5-ALERTS',
-              alias: '🧪 Prueba 5 Alertas',
-              lat: 4.6000,
-              lng: -74.1000
-            },
-            {
-              imei: 'TEST-IMEI-20-ALERTS',
-              alias: '🧪 Prueba 20 Alertas',
-              lat: 4.6100,
-              lng: -74.0900
             }
           ];
           const selected = mockDevices[0];
@@ -260,22 +265,6 @@ class Home extends React.Component {
               lng: -74.0817,
               volume_alerts: 20,
               repetitions: 3
-            },
-            {
-              imei: 'TEST-IMEI-5-ALERTS',
-              alias: '🧪 Prueba 5 Alertas',
-              lat: 4.6000,
-              lng: -74.1000,
-              volume_alerts: 20,
-              repetitions: 3
-            },
-            {
-              imei: 'TEST-IMEI-20-ALERTS',
-              alias: '🧪 Prueba 20 Alertas',
-              lat: 4.6100,
-              lng: -74.0900,
-              volume_alerts: 20,
-              repetitions: 3
             }
           ];
           const selected = mockDevices[0];
@@ -286,7 +275,35 @@ class Home extends React.Component {
     } catch (err) {
       console.error("DEBUG: Error leyendo AsyncStorage:", err);
     }
+    
+    // Iniciar Servicio de Llavero Bluetooth (BLE) de fondo
+    try {
+      startBackgroundBleService();
+      this.monitorBleStatus();
+    } catch (e) {
+      console.warn("DEBUG: Error al iniciar BLE en Home:", e.message);
+    }
   }
+
+  monitorBleStatus = () => {
+    // Monitoreo simple del estado del manager BLE
+    const manager = getBleManager();
+    const checkStatus = async () => {
+      try {
+        const state = await manager.state();
+        if (state === 'PoweredOn') {
+          this.setState({ bleStatus: 'active' });
+        } else {
+          this.setState({ bleStatus: 'searching' });
+        }
+      } catch (e) {
+        this.setState({ bleStatus: 'error' });
+      }
+    };
+    
+    this.bleStatusInterval = setInterval(checkStatus, 5000);
+    checkStatus();
+  };
 
   registerForPushNotificationsAsync = async (profileId) => {
     try {
@@ -337,17 +354,26 @@ class Home extends React.Component {
   };
 
   componentWillUnmount() {
+    this._isMounted = false;
     if (this.alertLogsSubscription) {
       supabase.removeChannel(this.alertLogsSubscription);
     }
     if (this._unsubscribeFocus) {
       this._unsubscribeFocus();
     }
+    if (this.bleStatusInterval) {
+      clearInterval(this.bleStatusInterval);
+    }
   }
 
   selectDevice = (dev) => {
     if (!dev) return;
-    this.setState({ selectedDevice: dev }, () => {
+    this.setState({ selectedDevice: dev }, async () => {
+      try {
+        await AsyncStorage.setItem('active_device_imei', dev.imei);
+      } catch (e) {
+        console.log("DEBUG: Error saving active imei to AsyncStorage", e.message);
+      }
       this.loadDeviceAlerts(dev.imei);
       this.subscribeToAlertLogs(dev.imei);
       this.checkActiveEmergencies(dev.imei);
@@ -465,25 +491,7 @@ class Home extends React.Component {
 
         console.log("DEBUG: Equipos detallados recuperados:", inventory);
         const selected = inventory && inventory.length > 0 ? inventory[0] : null;
-        
-        // Inyectamos las sirenas virtuales de pruebas al final
-        const finalDevices = [
-          ...(inventory || []),
-          {
-            imei: 'TEST-IMEI-5-ALERTS',
-            alias: '🧪 Prueba 5 Alertas',
-            lat: 4.6000,
-            lng: -74.1000
-          },
-          {
-            imei: 'TEST-IMEI-20-ALERTS',
-            alias: '🧪 Prueba 20 Alertas',
-            lat: 4.6100,
-            lng: -74.0900
-          }
-        ];
-
-        this.setState({ userDevices: finalDevices });
+        this.setState({ userDevices: inventory || [] });
         this.selectDevice(selected);
       } else {
         console.log("DEBUG: El usuario no tiene ningún equipo asignado en user_devices. Cargando mock de desarrollo.");
@@ -499,18 +507,6 @@ class Home extends React.Component {
             alias: 'Prueba P4 VeciSeguro',
             lat: 4.6097,
             lng: -74.0817
-          },
-          {
-            imei: 'TEST-IMEI-5-ALERTS',
-            alias: '🧪 Prueba 5 Alertas',
-            lat: 4.6000,
-            lng: -74.1000
-          },
-          {
-            imei: 'TEST-IMEI-20-ALERTS',
-            alias: '🧪 Prueba 20 Alertas',
-            lat: 4.6100,
-            lng: -74.0900
           }
         ];
         const selected = mockDevices[0];
@@ -936,6 +932,7 @@ class Home extends React.Component {
     client.on('connect', () => {
       console.log('DEBUG: ✅ App conectada a la Sirena (MQTT)');
       this.setState({ mqttClient: client });
+      global.mqttClient = client;
     });
 
     client.on('error', (err) => {
@@ -1078,8 +1075,10 @@ class Home extends React.Component {
               <Block>
                 <Text bold size={22} color={themeColors.textPrimary} style={{ letterSpacing: 0.5 }}>VECISEGURO</Text>
                 <Block row middle style={{ marginTop: 3 }}>
-                  <Block style={styles.statusDot} />
-                  <Text size={11} color={themeColors.textSecondary}>SISTEMA ONLINE</Text>
+                  <Block style={[styles.statusDot, { backgroundColor: this.state.bleStatus === 'active' ? '#10B981' : (this.state.bleStatus === 'error' ? '#EF4444' : '#FBBF24') }]} />
+                  <Text size={11} color={themeColors.textSecondary}>
+                    {this.state.bleStatus === 'active' ? 'ESCUDO ACTIVO (BLE)' : (this.state.bleStatus === 'error' ? 'ERROR BLE' : 'BUSCANDO BOTÓN...')}
+                  </Text>
                 </Block>
               </Block>
             </Block>
