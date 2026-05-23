@@ -1159,7 +1159,7 @@ class Home extends React.Component {
             </Text>
             {this.state.userDevices && this.state.userDevices.length > 0 ? (
               <Block>
-                {this.state.userDevices.length > 1 && (
+                {this.state.userDevices.length > 2 && (
                   <Input
                     right
                     color={themeColors.searchText}
