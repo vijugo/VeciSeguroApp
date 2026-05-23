@@ -17,6 +17,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const { width } = Dimensions.get("screen");
 
 class History extends React.Component {
+  _isMounted = true;
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     loading: true,
     logs: [],
@@ -34,6 +42,7 @@ class History extends React.Component {
   }
 
   componentWillUnmount() {
+    this._isMounted = false;
     if (this._unsubscribeFocus) {
       this._unsubscribeFocus();
     }

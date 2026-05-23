@@ -1,7 +1,11 @@
 import "react-native-url-polyfill/auto";
 import React, { useCallback, useEffect, useState } from "react";
-import { Image } from "react-native";
+import { Image, LogBox } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
+
+LogBox.ignoreLogs([
+  "Support for defaultProps will be removed from function components",
+]);
 import * as Font from "expo-font";
 import { Asset } from "expo-asset";
 import { Block, GalioProvider } from "galio-framework";
@@ -13,6 +17,7 @@ enableScreens();
 
 import Screens from "./navigation/Screens";
 import { Images, articles, argonTheme } from "./constants";
+import { startBackgroundBleService } from "./src/services/BlePanicService";
 
 // cache app images
 const assetImages = [
@@ -66,6 +71,8 @@ export default function App() {
   const onLayoutRootView = useCallback(async () => {
     if (appIsReady) {
       await SplashScreen.hideAsync();
+      // Iniciar el monitoreo del botón de pánico en segundo plano al estar listos
+      startBackgroundBleService();
     }
   }, [appIsReady]);
 

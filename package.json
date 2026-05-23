@@ -3,7 +3,7 @@
   "version": "1.9.0",
   "description": "Argon React Native, based on Argon Design System. Coded by Creative Tim",
   "scripts": {
-    "start": "expo start --dev-client",
+    "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "eject": "expo eject"
@@ -13,6 +13,7 @@
     "url": "git+https://github.com/creativetimofficial/argon-react-native.git"
   },
   "dependencies": {
+    "@config-plugins/react-native-ble-plx": "^7.0.0",
     "@expo/webpack-config": "~19.0.1",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-masked-view/masked-view": "0.3.1",
@@ -27,7 +28,9 @@
     "expo": "^51.0.39",
     "expo-app-loading": "~2.0.0",
     "expo-asset": "~10.0.10",
+    "expo-build-properties": "~0.12.5",
     "expo-constants": "~16.0.2",
+    "expo-dev-client": "~4.0.29",
     "expo-device": "~6.0.2",
     "expo-font": "~12.0.10",
     "expo-image-picker": "~15.1.0",
@@ -36,6 +39,7 @@
     "expo-notifications": "~0.28.19",
     "expo-splash-screen": "~0.27.7",
     "expo-status-bar": "~1.12.1",
+    "expo-task-manager": "~11.8.2",
     "galio-framework": "^0.8.0",
     "glob": "^8.0.3",
     "mqtt": "^4.3.7",
@@ -43,6 +47,7 @@
     "react": "18.2.0",
     "react-dom": "^18.2.0",
     "react-native": "0.74.5",
+    "react-native-ble-plx": "^3.5.1",
     "react-native-gesture-handler": "~2.16.1",
     "react-native-modal-dropdown": "1.0.2",
     "react-native-reanimated": "~3.10.1",

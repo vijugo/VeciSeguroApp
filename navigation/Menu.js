@@ -13,7 +13,7 @@ function CustomDrawerContent({
   state,
   ...rest
 }) {
-  const screens = ["Home", "Profile", "History", "Notifications", "About", "Account"];
+  const screens = ["Home", "Profile", "History", "Notifications", "LinkBeacon", "About", "Account"];
   const [darkMode, setDarkMode] = useState(true);
 
   useEffect(() => {

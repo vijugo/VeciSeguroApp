@@ -8,6 +8,18 @@ const ArgonExtra = require('../assets/font/argon.ttf');
 const IconArgonExtra = createIconSetFromIcoMoon(argonConfig, 'ArgonExtra');
 
 class IconExtra extends React.Component {
+  _isMounted = true;
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     fontLoaded: false,
   }

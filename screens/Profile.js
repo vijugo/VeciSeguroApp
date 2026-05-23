@@ -24,6 +24,18 @@ import { supabase } from "../constants/Supabase";
 const { width, height } = Dimensions.get("screen");
 
 class Profile extends React.Component {
+  _isMounted = true;
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     userId: null,
     fullName: "",

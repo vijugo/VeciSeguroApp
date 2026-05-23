@@ -7,6 +7,7 @@ import { getBleManager, saveLinkedBeacon, getLinkedBeacon, startBleScan, getLink
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../constants/Supabase';
+import { ScanMode } from 'react-native-ble-plx';
 
 const { width } = Dimensions.get('screen');
 
@@ -220,7 +221,14 @@ export default class LinkBeacon extends React.Component {
       }, 10000);
 
       console.log('DEBUG: Iniciando startDeviceScan...');
-      manager.startDeviceScan(null, { allowDuplicates: true }, (error, device) => {
+      const MINEW_SERVICE_UUIDS = [
+        '0000feaa-0000-1000-8000-00805f9b34fb', // Eddystone
+        '0000ffe1-0000-1000-8000-00805f9b34fb', // Info / Ráfagas
+        '0000fff1-0000-1000-8000-00805f9b34fb', // Trigger / Presencia
+        '00007f28-0000-1000-8000-00805f9b34fb'  // Configuración
+      ];
+      const serviceUUIDsFilter = this.state.filterD15N ? MINEW_SERVICE_UUIDS : null;
+      manager.startDeviceScan(serviceUUIDsFilter, { allowDuplicates: true, scanMode: ScanMode.LowLatency }, (error, device) => {
         if (error) {
           console.warn('DEBUG: Error en startDeviceScan callback:', error.message);
           if (this._isMounted) {
@@ -390,16 +398,7 @@ export default class LinkBeacon extends React.Component {
             }
           }
 
-          // 4. Detección por UUID de Configuración/Emparejamiento 7f28
-          if (!isButtonPressed && device.serviceUUIDs) {
-            const hasConfigUuid = device.serviceUUIDs.some(uuid => 
-              uuid && uuid.toLowerCase().includes('7f28')
-            );
-            if (hasConfigUuid) {
-              isButtonPressed = true;
-              console.log(`DEBUG: [LinkBeacon Scan] 🚨 Botón oprimido detectado (Minew-Config-7F28)! MAC: ${id}`);
-            }
-          }
+
 
           if (isButtonPressed) {
             if (!this.isProcessingLink) {

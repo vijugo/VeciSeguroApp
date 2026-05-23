@@ -24,6 +24,14 @@ import { supabase } from "../constants/Supabase";
 const { width } = Dimensions.get("screen");
 
 class VeciChat extends React.Component {
+  _isMounted = true;
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     loading: true,
     chatRoom: null,
@@ -67,6 +75,7 @@ class VeciChat extends React.Component {
   }
 
   componentWillUnmount() {
+    this._isMounted = false;
     // Limpiar suscripción en tiempo real al salir de la pantalla
     if (this.messagesSubscription) {
       supabase.removeChannel(this.messagesSubscription);
@@ -585,7 +594,7 @@ class VeciChat extends React.Component {
                     onPress={this.handleMarkUnderControl}
                     style={[styles.resolveButton, { backgroundColor: themeColors.dangerLight, borderColor: themeColors.danger }]}
                   >
-                    <Text bold size={11} color={themeColors.danger}>MARCAR SANO</Text>
+                    <Text bold size={11} color={themeColors.danger}>SITUACIÓN CONTROLADA</Text>
                   </TouchableOpacity>
                 )}
               </Block>

@@ -89,6 +89,15 @@ class DrawerItem extends React.Component {
             color={focused ? "white" : argonTheme.COLORS.INFO}
           />
         );
+      case "LinkBeacon":
+        return (
+          <Icon
+            name="bluetooth"
+            family="Font-Awesome"
+            size={14}
+            color={focused ? "white" : argonTheme.COLORS.PRIMARY}
+          />
+        );
       default:
         return null;
     }
@@ -109,6 +118,7 @@ class DrawerItem extends React.Component {
     if (title === "Notifications") displayTitle = "Personalizar Alertas";
     if (title === "Account") displayTitle = "Cerrar Sesión";
     if (title === "About") displayTitle = "Acerca de";
+    if (title === "LinkBeacon") displayTitle = "Vincular Llavero";
 
     const textColor = focused 
       ? "white" 

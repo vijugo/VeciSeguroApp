@@ -20,6 +20,18 @@ import { supabase } from "../constants/Supabase";
 const { width } = Dimensions.get("screen");
 
 class Notifications extends React.Component {
+  _isMounted = true;
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     loading: true,
     saving: false,

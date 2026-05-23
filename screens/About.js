@@ -18,6 +18,18 @@ import { argonTheme, Images } from "../constants";
 const { width, height } = Dimensions.get("screen");
 
 class About extends React.Component {
+  _isMounted = true;
+
+  componentWillUnmount() {
+    this._isMounted = false;
+  }
+
+  setState(state, callback) {
+    if (this._isMounted) {
+      super.setState(state, callback);
+    }
+  }
+
   state = {
     darkMode: true
   };
@@ -120,6 +132,9 @@ class About extends React.Component {
             </Text>
             <Text size={13} color={themeColors.accent} style={styles.versionBadge}>
               Protegiendo Nuestro Barrio
+            </Text>
+            <Text size={12} color={themeColors.textMuted} style={{ marginTop: 6, fontWeight: 'bold' }}>
+              Versión: 1.1.0-Burst (Detección de Ráfagas BLE)
             </Text>
             <Text size={14} color={themeColors.textSecondary} style={styles.headerDescription}>
               La herramienta digital creada para cuidarnos, comunicarnos y proteger juntos a nuestra comunidad. ¡La seguridad la hacemos entre todos!

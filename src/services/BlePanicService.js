@@ -1,12 +1,23 @@
-import { BleManager } from 'react-native-ble-plx';
+import { BleManager, ScanMode } from 'react-native-ble-plx';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../constants/Supabase';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { Platform, AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
+import { Buffer } from 'buffer';
+if (!global.Buffer) {
+  global.Buffer = Buffer;
+}
+import mqtt from 'mqtt/dist/mqtt';
 
 const BACKGROUND_BLE_TASK = 'background-ble-scan-task';
+const MINEW_SERVICE_UUIDS = [
+  '0000feaa-0000-1000-8000-00805f9b34fb', // Eddystone
+  '0000ffe1-0000-1000-8000-00805f9b34fb', // Info / Ráfagas
+  '0000fff1-0000-1000-8000-00805f9b34fb', // Trigger / Presencia
+  '00007f28-0000-1000-8000-00805f9b34fb'  // Configuración
+];
 const DEBOUNCE_TIME_MS = 90000; // 90 segundos para evitar doble disparo mientras el llavero anuncia
 let bleManagerInstance = null;
 let isScanning = false;
@@ -14,6 +25,7 @@ const lastInfoPackets = {};
 const lastTriggerPackets = {};
 let scanTimeoutId = null;
 const lastTriggerTimesMemory = {};
+let lastBackgroundLocation = null;
 
 function base64ToBytes(base64) {
   if (!base64) return null;
@@ -221,6 +233,17 @@ TaskManager.defineTask(BACKGROUND_BLE_TASK, async ({ data, error }) => {
     console.error('Error en servicio de ubicación de fondo:', error);
     return;
   }
+  
+  // Guardar última ubicación de fondo reportada por el sistema
+  if (data && data.locations && data.locations.length > 0) {
+    const latestLoc = data.locations[data.locations.length - 1];
+    lastBackgroundLocation = {
+      latitude: latestLoc.coords.latitude,
+      longitude: latestLoc.coords.longitude
+    };
+    console.log('DEBUG: 📍 Ubicación de fondo actualizada:', lastBackgroundLocation);
+  }
+
   // Esta tarea se dispara periódicamente por actualizaciones de localización de fondo,
   // lo cual mantiene la máquina virtual de JS despierta en Android/iOS.
   // Dentro de ella nos aseguramos de que el escáner BLE continúe escuchando.
@@ -265,7 +288,7 @@ scanTimeoutId = setTimeout(() => {
     }, 2000);
   }, 120000); // Reiniciar cada 2 minutos en lugar de 3 para mayor fiabilidad
 
-  manager.startDeviceScan(null, { allowDuplicates: true }, async (error, device) => {
+  manager.startDeviceScan(MINEW_SERVICE_UUIDS, { allowDuplicates: true, scanMode: ScanMode.LowLatency }, async (error, device) => {
     if (error) {
       console.warn('DEBUG: ⚠️ Error de escaneo BLE:', error.message);
       isScanning = false;
@@ -437,16 +460,7 @@ scanTimeoutId = setTimeout(() => {
           }
         }
 
-        // 4. Detección por UUID de Configuración/Emparejamiento 7f28
-        if (!isButtonPressed && device.serviceUUIDs) {
-          const hasConfigUuid = device.serviceUUIDs.some(uuid => 
-            uuid && uuid.toLowerCase().includes('7f28')
-          );
-          if (hasConfigUuid) {
-            isButtonPressed = true;
-            triggerSource = 'Minew-Config-7F28';
-          }
-        }
+
 
         // Buscar si la MAC coincide con alguno de los beacons vinculados
         const matchingBeacon = beacons.find(b => b && b.macAddress && b.macAddress.toUpperCase() === deviceMac);
@@ -477,12 +491,6 @@ scanTimeoutId = setTimeout(() => {
         }
 
         if (isButtonPressed && isLinked) {
-          // Si estamos en segundo plano (headless/background), agregamos un pequeño retardo desincronizado
-          // para permitir que el contexto de primer plano (foreground) registre y bloquee la alerta primero.
-          if (AppState.currentState !== 'active') {
-            await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
-          }
-
           const now = Date.now();
 
           // 1. Debounce en memoria (sincrónico) para evitar ráfagas en el mismo hilo de JS
@@ -492,17 +500,27 @@ scanTimeoutId = setTimeout(() => {
             return;
           }
 
-          // 2. Debounce en AsyncStorage (asincrónico) por si se reinicia el contexto
+          // Guardar marca de tiempo sincrónicamente en memoria AHORA para bloquear otros paquetes de la ráfaga de inmediato
+          lastTriggerTimesMemory[deviceMac] = now;
+
+          // Si estamos en segundo plano (headless/background), agregamos un pequeño retardo desincronizado
+          // para permitir que el contexto de primer plano (foreground) registre y bloquee la alerta primero.
+          if (AppState.currentState !== 'active') {
+            await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 200));
+          }
+
+          // 2. Debounce en AsyncStorage (asincrónico) por si se reinicia el contexto o para comunicación entre hilos
           const debounceKey = `@veci_beacon_last_trigger_${deviceMac}`;
           const lastTrigger = await AsyncStorage.getItem(debounceKey);
-          if (lastTrigger && now - parseInt(lastTrigger) < DEBOUNCE_TIME_MS) {
+          if (lastTrigger && Math.abs(now - parseInt(lastTrigger)) < DEBOUNCE_TIME_MS) {
             console.log(`DEBUG: ⏳ Alerta del llavero ${deviceMac} ignorada por bloqueo temporal (AsyncStorage).`);
-            lastTriggerTimesMemory[deviceMac] = parseInt(lastTrigger);
+            if (parseInt(lastTrigger) > lastMemoryTime) {
+              lastTriggerTimesMemory[deviceMac] = parseInt(lastTrigger);
+            }
             return;
           }
 
-          // Guardar marca de tiempo sincrónicamente en memoria e iniciar el guardado asincrónico en AsyncStorage
-          lastTriggerTimesMemory[deviceMac] = now;
+          // Guardar marca de tiempo en AsyncStorage
           await AsyncStorage.setItem(debounceKey, now.toString());
 
           // Generar ID determinista basado en el bloque de 90 segundos actual para bloquear carreras simultáneas en BD
@@ -533,6 +551,38 @@ export const stopBleScan = () => {
   console.log('DEBUG: 🛑 Escaneo de Bluetooth detenido.');
 };
 
+// Obtener coordenadas GPS de forma rápida y no bloqueante en segundo plano
+const getFastLocation = async () => {
+  try {
+    // 1. Usar la última ubicación recibida por la tarea de fondo si está disponible
+    if (lastBackgroundLocation) {
+      console.log('DEBUG: 📍 Usando ubicación guardada de fondo:', lastBackgroundLocation);
+      return lastBackgroundLocation;
+    }
+
+    // 2. Intentar obtener la última ubicación conocida por el sistema (muy rápido, sin hardware GPS lock)
+    const lastLoc = await Location.getLastKnownPositionAsync();
+    if (lastLoc) {
+      console.log('DEBUG: 📍 Usando última ubicación conocida del sistema:', lastLoc.coords);
+      return { latitude: lastLoc.coords.latitude, longitude: lastLoc.coords.longitude };
+    }
+
+    // 3. Solo si la app está activa (primer plano), intentar obtener la ubicación actual con un timeout estricto
+    if (AppState.currentState === 'active') {
+      console.log('DEBUG: 📍 App activa. Intentando obtener ubicación actual...');
+      const locationPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
+      const loc = await Promise.race([locationPromise, timeoutPromise]);
+      if (loc) {
+        return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+      }
+    }
+  } catch (e) {
+    console.warn('DEBUG: ⚠️ No se pudo obtener GPS rápido para la alerta del llavero:', e.message);
+  }
+  return { latitude: 0, longitude: 0 };
+};
+
 // Función para disparar la alerta desde segundo plano con ID determinista de deduplicación
 const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => {
   try {
@@ -554,10 +604,10 @@ const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => 
     const ninetySecondsAgo = new Date(nowDb.getTime() - DEBOUNCE_TIME_MS).toISOString();
 
     const [dbCheckResult, gpsResult] = await Promise.all([
-      // Consulta de alerta duplicada reciente en Supabase
+      // Consulta de alerta duplicada reciente en Supabase con timeout de 1.5 segundos
       (async () => {
         try {
-          const { data, error } = await supabase
+          const checkPromise = supabase
             .from('alert_logs')
             .select('created_at')
             .eq('imei', activeImei)
@@ -566,32 +616,17 @@ const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => 
             .gt('created_at', ninetySecondsAgo)
             .order('created_at', { ascending: false })
             .limit(1);
-          if (error) throw error;
-          return data;
+          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ data: [], error: null }), 1500));
+          const result = await Promise.race([checkPromise, timeoutPromise]);
+          if (result && result.error) throw result.error;
+          return result ? result.data : [];
         } catch (err) {
           console.warn('DEBUG: ⚠️ Error al consultar alertas recientes en Supabase:', err.message);
           return [];
         }
       })(),
-      // Obtener coordenadas GPS de forma rápida (primero cache de última conocida, luego fallback ultrarrápido)
-      (async () => {
-        try {
-          const lastLoc = await Location.getLastKnownPositionAsync();
-          if (lastLoc) {
-            return { latitude: lastLoc.coords.latitude, longitude: lastLoc.coords.longitude };
-          }
-          // Si no hay última posición, intentar una petición de ubicación muy corta (máximo 500ms)
-          const locationPromise = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 500));
-          const loc = await Promise.race([locationPromise, timeoutPromise]);
-          if (loc) {
-            return { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
-          }
-        } catch (e) {
-          console.warn('DEBUG: ⚠️ No se pudo obtener GPS rápido para la alerta del llavero:', e.message);
-        }
-        return { latitude: 0, longitude: 0 };
-      })()
+      // Obtener coordenadas GPS de forma rápida
+      getFastLocation()
     ]);
 
     if (dbCheckResult && dbCheckResult.length > 0) {
@@ -612,6 +647,48 @@ const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => 
         15 // volumen máximo por defecto
       ]
     });
+
+    try {
+      if (global.mqttClient && typeof global.mqttClient.publish === 'function' && global.mqttClient.connected) {
+        console.log('DEBUG: 🚨 Usando cliente MQTT global en segundo plano para activar sirena...');
+        global.mqttClient.publish(`veciseguro/${activeImei}/cmd`, payload, { qos: 1 }, (err) => {
+          if (err) {
+            console.error('DEBUG: ❌ Error publicando MQTT en cliente global:', err.message);
+          } else {
+            console.log('DEBUG: ✅ Comando MQTT enviado exitosamente mediante cliente global.');
+          }
+        });
+      } else {
+        console.log('DEBUG: 🚨 Cliente MQTT global no disponible o desconectado. Conectando a demanda...');
+        const options = {
+          clientId: 'veci_service_' + Math.random().toString(16).substr(2, 8),
+          username: 'VeciSeguro',
+          password: 'Mofnem-xubcyd-gizro1',
+          clean: true,
+          connectTimeout: 4000,
+        };
+        const onDemandClient = mqtt.connect('wss://a2467217.ala.us-east-1.emqxsl.com:8084/mqtt', options);
+        
+        onDemandClient.on('connect', () => {
+          console.log('DEBUG: 🚨 Conectado a MQTT a demanda en segundo plano. Enviando comando...');
+          onDemandClient.publish(`veciseguro/${activeImei}/cmd`, payload, { qos: 1 }, (err) => {
+            if (err) {
+              console.error('DEBUG: ❌ Error publicando MQTT a demanda:', err.message);
+            } else {
+              console.log('DEBUG: ✅ Comando MQTT enviado exitosamente a demanda.');
+            }
+            onDemandClient.end(true);
+          });
+        });
+
+        onDemandClient.on('error', (err) => {
+          console.error('DEBUG: ❌ Error MQTT a demanda:', err.message);
+          onDemandClient.end(true);
+        });
+      }
+    } catch (mqttErr) {
+      console.error('DEBUG: ❌ Error general al enviar MQTT:', mqttErr.message);
+    }
 
     // 2. Registrar Alerta en Supabase (alert_logs)
     const { error } = await supabase
@@ -654,6 +731,7 @@ const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => 
         body: `Se ha disparado una alerta de ${(alertItem?.name || 'PANICO').toUpperCase()} desde tu llavero BLE.`,
         sound: true,
         priority: Notifications.AndroidNotificationPriority.MAX,
+        channelId: 'default',
       },
       trigger: null,
     });
@@ -667,28 +745,39 @@ const triggerBeaconAlert = async (alertItem, deterministicId, triggerSource) => 
 export const startBackgroundBleService = async () => {
   try {
     const { status: foreStatus } = await Location.requestForegroundPermissionsAsync();
-    if (foreStatus !== 'granted') return;
+    if (foreStatus !== 'granted') {
+      console.warn('DEBUG: Permisos de ubicación en primer plano denegados. No se iniciará el escaneo BLE.');
+      return;
+    }
 
     // En Android requerimos background location para mantener vivo el JS en segundo plano
     if (Platform.OS === 'android') {
-      const { status: backStatus } = await Location.requestBackgroundPermissionsAsync();
-      if (backStatus === 'granted') {
-        await Location.startLocationUpdatesAsync(BACKGROUND_BLE_TASK, {
-          accuracy: Location.Accuracy.Balanced,
-          timeInterval: 60000,
-          distanceInterval: 50,
-          foregroundService: {
-            notificationTitle: 'VeciSeguro Activo',
-            notificationBody: 'Monitoreando tu botón de pánico en segundo plano.',
-            notificationColor: '#4F46E5',
-          },
-        });
+      try {
+        const { status: backStatus } = await Location.requestBackgroundPermissionsAsync();
+        if (backStatus === 'granted') {
+          await Location.startLocationUpdatesAsync(BACKGROUND_BLE_TASK, {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 60000,
+            distanceInterval: 50,
+            foregroundService: {
+              notificationTitle: 'VeciSeguro Activo',
+              notificationBody: 'Monitoreando tu botón de pánico en segundo plano.',
+              notificationColor: '#4F46E5',
+            },
+          });
+        }
+      } catch (locationErr) {
+        console.warn('DEBUG: No se pudo iniciar el servicio de ubicación en segundo plano:', locationErr.message);
       }
     }
-    
-    // Iniciar escaneo BLE
-    startBleScan();
   } catch (err) {
     console.error('Error al iniciar servicio de fondo BLE:', err);
+  }
+
+  // Iniciar escaneo BLE en cualquier caso
+  try {
+    await startBleScan();
+  } catch (bleErr) {
+    console.error('Error al iniciar escaneo BLE desde servicio de fondo:', bleErr);
   }
 };

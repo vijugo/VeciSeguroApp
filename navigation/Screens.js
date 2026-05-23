@@ -19,6 +19,7 @@ import Register from "../screens/Register";
 import About from "../screens/About";
 import History from "../screens/History";
 import VeciChat from "../screens/VeciChat";
+import LinkBeacon from "../screens/LinkBeacon";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createDrawerNavigator } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
@@ -268,9 +269,7 @@ function HistoryStack(props) {
         name="HistoryScreen"
         component={History}
         options={{
-          header: ({ navigation, scene }) => (
-            <Header title="Historial de Alertas" navigation={navigation} scene={scene} />
-          ),
+          headerShown: false,
           cardStyle: { backgroundColor: "#F8F9FE" }
         }}
       />
@@ -280,6 +279,29 @@ function HistoryStack(props) {
         options={{
           headerShown: false,
           cardStyle: { backgroundColor: "transparent" }
+        }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+function LinkBeaconStack(props) {
+  return (
+    <Stack.Navigator
+      initialRouteName="LinkBeaconScreen"
+      screenOptions={{
+        mode: "card",
+        headerShown: "screen",
+      }}
+    >
+      <Stack.Screen
+        name="LinkBeaconScreen"
+        component={LinkBeacon}
+        options={{
+          header: ({ navigation, scene }) => (
+            <Header back title="Vincular Llavero" navigation={navigation} scene={scene} onBackPress={() => navigation.navigate('Home')} />
+          ),
+          cardStyle: { backgroundColor: "#F8F9FE" }
         }}
       />
     </Stack.Navigator>
@@ -342,6 +364,13 @@ function AppStack(props) {
       <Drawer.Screen
         name="Notifications"
         component={NotificationsStack}
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Drawer.Screen
+        name="LinkBeacon"
+        component={LinkBeaconStack}
         options={{
           headerShown: false,
         }}
